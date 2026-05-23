@@ -3,32 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Oberlin Weather Tracker</title>
+<title>Oberlin Weather — oberlinweather.site</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 :root {
-  --bg:#0d0f12; --bg2:#141720; --bg3:#1c2030;
-  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
-  --text:#e8eaf0; --text2:#8b90a0; --text3:#555c70;
-  --accent:#4af0c4; --accent2:#2db89a;
-  --warn:#f0a94a; --danger:#f05a5a; --blue:#4a9af0;
-  --cin:#c084fc;
-  --radius:10px; --radius-sm:6px;
-  --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
+  --bg:#0d0f12;--bg2:#141720;--bg3:#1c2030;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0;--text2:#8b90a0;--text3:#555c70;
+  --accent:#4af0c4;--accent2:#2db89a;
+  --warn:#f0a94a;--danger:#f05a5a;--blue:#4a9af0;--cin:#c084fc;
+  --radius:10px;--radius-sm:6px;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;}
-.app{max-width:940px;margin:0 auto;padding:24px 20px;}
+.app{max-width:960px;margin:0 auto;padding:24px 20px;}
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;}
 .header h1{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--accent);letter-spacing:.02em;}
 .header .sub{font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;}
-.header-right{font-family:var(--mono);font-size:11px;color:var(--text3);text-align:right;}
-.tabs{display:flex;gap:2px;margin-bottom:20px;background:var(--bg2);border-radius:var(--radius);padding:4px;border:1px solid var(--border);}
-.tab{flex:1;padding:8px 10px;background:transparent;border:none;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;border-radius:var(--radius-sm);transition:all .15s;text-transform:uppercase;letter-spacing:.05em;}
+.header-right{font-family:var(--mono);font-size:11px;color:var(--text3);text-align:right;line-height:1.8;}
+.tabs{display:flex;gap:2px;margin-bottom:20px;background:var(--bg2);border-radius:var(--radius);padding:4px;border:1px solid var(--border);flex-wrap:wrap;}
+.tab{flex:1;min-width:70px;padding:8px 8px;background:transparent;border:none;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;border-radius:var(--radius-sm);transition:all .15s;text-transform:uppercase;letter-spacing:.04em;}
 .tab:hover{color:var(--text);}
 .tab.active{background:var(--bg3);color:var(--accent);}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px;}
 .card-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:14px;}
 .metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;}
 .metric{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:13px;}
@@ -45,17 +44,56 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);font-si
 .signal-note{font-size:12px;color:var(--text2);margin-top:3px;}
 .forecast-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;}
 .forecast-day{flex-shrink:0;min-width:74px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 8px;text-align:center;}
-.f-day{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:5px;}
+.f-day{font-family:var(--mono);font-size:10px;text-transform:uppercase;color:var(--text3);margin-bottom:5px;}
 .f-high{font-family:var(--mono);font-size:17px;color:var(--text);}
 .f-low{font-family:var(--mono);font-size:12px;color:var(--text3);}
 .f-rain{font-size:11px;color:var(--blue);margin-top:3px;}
-#radar-map{width:100%;height:380px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);}
+/* Radar */
+#radar-map{width:100%;height:400px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);}
 .radar-controls{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;}
-.radar-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-family:var(--mono);font-size:11px;padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;}
+.radar-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-family:var(--mono);font-size:11px;padding:7px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;}
 .radar-btn:hover,.radar-btn.active{background:var(--accent2);color:var(--bg);border-color:var(--accent);}
+.radar-play{background:var(--accent2);border:none;color:var(--bg);font-family:var(--mono);font-size:12px;font-weight:500;padding:7px 18px;border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;min-width:80px;}
+.radar-play:hover{background:var(--accent);}
+.frame-slider{flex:1;min-width:120px;accent-color:var(--accent2);}
+.radar-ts-label{font-family:var(--mono);font-size:11px;color:var(--text3);min-width:160px;}
+/* History tab */
+.hist-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+.hist-col{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;}
+.hist-col-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:12px;}
+.hist-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.hist-row:last-child{border-bottom:none;}
+.hist-label{color:var(--text2);}
+.hist-val{font-family:var(--mono);color:var(--text);}
+.hist-val.hot{color:var(--danger);}
+.hist-val.cold{color:var(--blue);}
+.hist-val.warm{color:var(--warn);}
+.record-badge{font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:20px;margin-left:6px;}
+.record-high{background:rgba(240,90,90,.15);color:var(--danger);border:1px solid rgba(240,90,90,.3);}
+.record-low{background:rgba(74,154,240,.15);color:var(--blue);border:1px solid rgba(74,154,240,.3);}
+.anomaly-bar{height:3px;border-radius:2px;background:var(--bg2);margin-top:6px;overflow:hidden;}
+.anomaly-fill{height:100%;border-radius:2px;transition:width .6s;}
+/* Compare */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.city-header{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.city-header.ob{color:var(--accent);}
+.city-header.cin{color:var(--cin);}
+.cmp-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);}
+.cmp-row:last-child{border-bottom:none;}
+.cmp-label{font-size:12px;color:var(--text3);}
+.cmp-val{font-family:var(--mono);font-size:13px;color:var(--text);}
+.delta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;}
+.delta-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:13px;text-align:center;}
+.delta-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px;}
+.delta-val{font-family:var(--mono);font-size:22px;font-weight:500;}
+.dpos{color:var(--danger);}
+.dneg{color:var(--blue);}
+.dzero{color:var(--text3);}
+.delta-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+/* Log */
 .form-group{margin-bottom:14px;}
 .form-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px;display:block;}
-textarea,select,input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 12px;outline:none;transition:border-color .15s;}
+textarea,select{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 12px;outline:none;transition:border-color .15s;}
 textarea:focus,select:focus{border-color:var(--accent2);}
 textarea{resize:vertical;min-height:80px;}
 select option{background:var(--bg2);}
@@ -64,83 +102,64 @@ select option{background:var(--bg2);}
 .pill{padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s;user-select:none;}
 .pill:hover{border-color:var(--accent2);color:var(--text);}
 .pill.on{background:rgba(74,240,196,.1);border-color:var(--accent);color:var(--accent);}
-.btn{background:var(--accent2);color:var(--bg);border:none;border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;font-weight:500;padding:10px 20px;cursor:pointer;transition:all .15s;letter-spacing:.04em;}
+.btn{background:var(--accent2);color:var(--bg);border:none;border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;font-weight:500;padding:10px 20px;cursor:pointer;transition:all .15s;}
 .btn:hover{background:var(--accent);}
 .btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2);}
 .btn-ghost:hover{border-color:var(--accent2);color:var(--text);background:transparent;}
+.status{font-family:var(--mono);font-size:11px;color:var(--accent2);margin-top:8px;min-height:18px;}
+/* History log */
 .log-entry{border-bottom:1px solid var(--border);padding:14px 0;}
 .log-entry:last-child{border-bottom:none;}
-.log-ts{font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;}
-.log-note{font-size:14px;color:var(--text);margin:6px 0 4px;line-height:1.5;}
-.log-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;}
+.log-ts{font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;}
+.log-note{font-size:14px;color:var(--text);margin:5px 0 4px;line-height:1.5;}
+.log-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;}
 .log-tag{font-size:10px;font-family:var(--mono);background:var(--bg3);color:var(--text3);padding:2px 8px;border-radius:20px;border:1px solid var(--border);}
 .log-tag.methane{color:var(--warn);border-color:rgba(240,169,74,.3);}
 .log-tag.smoke{color:var(--blue);border-color:rgba(74,154,240,.3);}
 .log-tag.radar-miss{color:var(--danger);border-color:rgba(240,90,90,.3);}
 .log-wx{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px;}
-.log-delta{font-family:var(--mono);font-size:10px;margin-top:3px;}
+/* Hypotheses */
 .hypo{border-left:2px solid var(--accent2);padding:12px 16px;background:var(--bg3);border-radius:0 var(--radius-sm) var(--radius-sm) 0;margin-bottom:10px;}
 .hypo-title{font-family:var(--mono);font-size:13px;color:var(--text);margin-bottom:4px;}
 .hypo-desc{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:8px;}
 .hypo-bar{background:var(--bg2);border-radius:2px;height:4px;margin-bottom:4px;overflow:hidden;}
-.hypo-bar-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s;}
+.hypo-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s;}
 .hypo-count{font-family:var(--mono);font-size:11px;color:var(--text3);}
-.methane-border{border-left-color:var(--warn);}
-.smoke-border{border-left-color:var(--blue);}
-.radar-border{border-left-color:var(--danger);}
-.status{font-family:var(--mono);font-size:11px;color:var(--accent2);margin-top:8px;min-height:18px;}
-.status.err{color:var(--danger);}
+.mb{border-left-color:var(--warn);}
+.sb{border-left-color:var(--blue);}
+.rb{border-left-color:var(--danger);}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 .hidden{display:none;}
+.empty-state{text-align:center;padding:32px;color:var(--text3);font-family:var(--mono);font-size:12px;}
+.export-row{display:flex;gap:8px;margin-top:14px;}
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .count-badge{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--bg3);padding:3px 10px;border-radius:20px;border:1px solid var(--border);}
-.empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-family:var(--mono);font-size:12px;}
-.export-row{display:flex;gap:8px;margin-top:16px;}
-.divider{height:1px;background:var(--border);margin:16px 0;}
-
-/* Compare tab */
-.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
-.city-header{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
-.city-header.oberlin{color:var(--accent);}
-.city-header.cincinnati{color:var(--cin);}
-.cmp-metric{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--border);}
-.cmp-metric:last-child{border-bottom:none;}
-.cmp-label{font-size:12px;color:var(--text3);}
-.cmp-val{font-family:var(--mono);font-size:14px;color:var(--text);}
-.delta-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;}
-.delta-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:13px;text-align:center;}
-.delta-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px;}
-.delta-val{font-family:var(--mono);font-size:22px;font-weight:500;}
-.delta-pos{color:var(--danger);}
-.delta-neg{color:var(--blue);}
-.delta-zero{color:var(--text3);}
-.delta-sub{font-size:11px;color:var(--text3);margin-top:3px;}
-.divergence-history{margin-top:4px;}
-.div-entry{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;}
-.div-entry:last-child{border-bottom:none;}
-.div-ts{font-family:var(--mono);font-size:10px;color:var(--text3);flex-shrink:0;min-width:120px;}
-.div-vals{color:var(--text2);flex:1;}
-.div-score{font-family:var(--mono);font-size:12px;font-weight:500;}
+.loading-note{font-family:var(--mono);font-size:11px;color:var(--text3);padding:10px 0;}
+@media(max-width:600px){.hist-grid{grid-template-columns:1fr;}.compare-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="header">
     <div>
-      <h1>// oberlin wx tracker</h1>
-      <div class="sub">41.29°N · 82.22°W · vs Cincinnati · 39.10°N · 84.51°W</div>
+      <h1>// oberlinweather.site</h1>
+      <div class="sub">41.29°N · 82.22°W · Lorain County, OH</div>
     </div>
-    <div class="header-right" id="clock">--:-- --<br><span id="dateline" style="color:var(--text3)">loading...</span></div>
+    <div class="header-right">
+      <span id="clock">--:-- --</span><br>
+      <span id="dateline" style="color:var(--text3)">--</span>
+    </div>
   </div>
 
   <div class="tabs">
     <button class="tab active" onclick="switchTab('now')">Now</button>
-    <button class="tab" onclick="switchTab('compare')">Compare</button>
     <button class="tab" onclick="switchTab('radar')">Radar</button>
+    <button class="tab" onclick="switchTab('history-wx')">History</button>
+    <button class="tab" onclick="switchTab('compare')">Compare</button>
     <button class="tab" onclick="switchTab('log')">Log</button>
     <button class="tab" onclick="switchTab('hypotheses')">Hypotheses</button>
-    <button class="tab" onclick="switchTab('history')">History</button>
+    <button class="tab" onclick="switchTab('logbook')">Logbook</button>
   </div>
 
   <!-- NOW -->
@@ -152,8 +171,8 @@ select option{background:var(--bg2);}
       <div class="metric"><div class="metric-label">Precip / hr</div><div class="metric-val" id="m-precip">--</div><div class="metric-sub">inches</div></div>
       <div class="metric"><div class="metric-label">Pressure</div><div class="metric-val" id="m-pres">--</div><div class="metric-sub">hPa</div></div>
     </div>
-    <div class="card" style="margin-bottom:12px;">
-      <div class="card-title">Air quality index <span id="aqi-cat" style="color:var(--text2);margin-left:6px;"></span></div>
+    <div class="card">
+      <div class="card-title">Air quality <span id="aqi-cat" style="margin-left:6px;color:var(--text2);"></span></div>
       <div style="display:flex;align-items:baseline;gap:10px;">
         <span id="aqi-num" style="font-family:var(--mono);font-size:32px;">--</span>
         <span id="aqi-pm" style="font-size:12px;color:var(--text3);"></span>
@@ -162,7 +181,7 @@ select option{background:var(--bg2);}
       <div class="aqi-labels"><span>Good</span><span>Mod</span><span>USG</span><span>Unhealthy</span><span>Very</span><span>Hazardous</span></div>
       <div style="font-size:12px;color:var(--text2);margin-top:10px;" id="aqi-note"></div>
     </div>
-    <div class="card" style="margin-bottom:12px;">
+    <div class="card">
       <div class="card-title">Hypothesis signals</div>
       <div id="signals"></div>
     </div>
@@ -172,49 +191,71 @@ select option{background:var(--bg2);}
     </div>
   </div>
 
-  <!-- COMPARE -->
-  <div id="tab-compare" class="hidden">
-    <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:14px;line-height:1.6;">
-      Live conditions: <span style="color:var(--accent)">Oberlin</span> vs <span style="color:var(--cin)">Cincinnati</span> · Deltas show how Oberlin diverges from Cincinnati right now
-    </div>
-
-    <div class="delta-row" id="delta-row">
-      <div class="delta-card"><div class="delta-label">Temp delta</div><div class="delta-val delta-zero" id="d-temp">--</div><div class="delta-sub">Oberlin vs Cin</div></div>
-      <div class="delta-card"><div class="delta-label">Humidity delta</div><div class="delta-val delta-zero" id="d-hum">--</div><div class="delta-sub">percentage points</div></div>
-      <div class="delta-card"><div class="delta-label">AQI delta</div><div class="delta-val delta-zero" id="d-aqi">--</div><div class="delta-sub">Oberlin vs Cin</div></div>
-      <div class="delta-card"><div class="delta-label">Wind delta</div><div class="delta-val delta-zero" id="d-wind">--</div><div class="delta-sub">mph</div></div>
-    </div>
-
-    <div class="compare-grid">
-      <div class="card">
-        <div class="city-header oberlin">📍 Oberlin, OH</div>
-        <div id="ob-cmp-rows"></div>
-      </div>
-      <div class="card">
-        <div class="city-header cincinnati">📍 Cincinnati, OH</div>
-        <div id="cin-cmp-rows"></div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:4px;">
-      <div class="card-title">Divergence log — notable differences over time</div>
-      <div id="divergence-history" class="divergence-history"></div>
-      <div class="empty-state hidden" id="no-divergence" style="padding:20px;">No logged entries yet. Divergence data builds as you log daily observations.</div>
-    </div>
-  </div>
-
   <!-- RADAR -->
   <div id="tab-radar" class="hidden">
     <div class="card" style="padding:12px;">
-      <div class="card-title" style="margin-bottom:10px;">Live precipitation radar — Oberlin, OH</div>
+      <div class="card-title" style="margin-bottom:8px;">Live animated radar — Oberlin & Cincinnati</div>
       <div id="radar-map"></div>
       <div class="radar-controls">
-        <button class="radar-btn active" id="btn-precip" onclick="setRadarLayer('precip')">Precipitation</button>
-        <div style="font-family:var(--mono);font-size:11px;color:var(--text3);flex:1;" id="radar-ts">Loading radar data...</div>
+        <button class="radar-play" id="play-btn" onclick="togglePlay()">▶ Play</button>
+        <input type="range" class="frame-slider" id="frame-slider" min="0" max="7" value="7" oninput="scrubFrame(this.value)">
+        <div class="radar-ts-label" id="radar-ts">Loading frames...</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="radar-btn active" id="btn-precip" onclick="setOpacity(0.75)">Normal</button>
+        <button class="radar-btn" id="btn-bright" onclick="setOpacity(1)">Bright</button>
+        <button class="radar-btn" id="btn-dim" onclick="setOpacity(0.4)">Dim</button>
       </div>
       <div style="margin-top:10px;font-size:12px;color:var(--text3);font-family:var(--mono);">
-        ⚡ Watch for cells that appear and vanish in 1–2 frames — those are your radar-invisible events. Log them immediately.
+        ⚡ Watch for cells appearing and vanishing in 1–2 frames — those are your radar-invisible events. Log immediately.
       </div>
+    </div>
+  </div>
+
+  <!-- HISTORICAL WEATHER -->
+  <div id="tab-history-wx" class="hidden">
+    <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:14px;line-height:1.7;">
+      Today's conditions vs this date last year, 5-year average, and all-time records for Oberlin.
+    </div>
+    <div id="hist-loading" class="loading-note">Loading historical data...</div>
+    <div id="hist-content" class="hidden">
+      <div class="hist-grid" id="hist-cols"></div>
+      <div class="card">
+        <div class="card-title">Anomaly vs 5-year average</div>
+        <div id="anomaly-section"></div>
+      </div>
+      <div class="card" style="margin-top:4px;">
+        <div class="card-title">This week — Oberlin high temps</div>
+        <div class="forecast-row" id="hist-week-row"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARE -->
+  <div id="tab-compare" class="hidden">
+    <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:14px;">
+      Live: <span style="color:var(--accent)">Oberlin</span> vs <span style="color:var(--cin)">Cincinnati</span>
+    </div>
+    <div class="delta-grid">
+      <div class="delta-card"><div class="delta-label">Temp delta</div><div class="delta-val dzero" id="d-temp">--</div><div class="delta-sub">Oberlin vs Cin</div></div>
+      <div class="delta-card"><div class="delta-label">Humidity</div><div class="delta-val dzero" id="d-hum">--</div><div class="delta-sub">percentage pts</div></div>
+      <div class="delta-card"><div class="delta-label">AQI delta</div><div class="delta-val dzero" id="d-aqi">--</div><div class="delta-sub">air quality</div></div>
+      <div class="delta-card"><div class="delta-label">Wind delta</div><div class="delta-val dzero" id="d-wind">--</div><div class="delta-sub">mph</div></div>
+    </div>
+    <div class="compare-grid">
+      <div class="card">
+        <div class="city-header ob">📍 Oberlin, OH</div>
+        <div id="ob-rows"></div>
+      </div>
+      <div class="card">
+        <div class="city-header cin">📍 Cincinnati, OH</div>
+        <div id="cin-rows"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Logged divergence history</div>
+      <div id="div-history"></div>
+      <div class="empty-state hidden" id="no-div">Log entries to build divergence history.</div>
     </div>
   </div>
 
@@ -258,7 +299,7 @@ select option{background:var(--bg2);}
           </select>
         </div>
       </div>
-      <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:12px;" id="wx-preview">— Oberlin + Cincinnati conditions will attach automatically —</div>
+      <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:12px;" id="wx-preview">— conditions will attach automatically —</div>
       <button class="btn" onclick="saveLog()">Save entry</button>
       <div class="status" id="log-status"></div>
     </div>
@@ -267,23 +308,23 @@ select option{background:var(--bg2);}
   <!-- HYPOTHESES -->
   <div id="tab-hypotheses" class="hidden">
     <div style="font-size:12px;color:var(--text3);margin-bottom:16px;font-family:var(--mono);line-height:1.6;">
-      Three working hypotheses. Counts and divergence data build as you log.
+      Three working hypotheses. Pattern data builds as you log.
     </div>
     <div id="hypo-list"></div>
-    <div class="card" style="margin-top:14px;">
-      <div class="card-title">Pattern notes</div>
+    <div class="card">
+      <div class="card-title">Pattern summary</div>
       <div id="pattern-text" style="font-size:13px;color:var(--text2);line-height:1.7;"></div>
     </div>
   </div>
 
-  <!-- HISTORY -->
-  <div id="tab-history" class="hidden">
+  <!-- LOGBOOK -->
+  <div id="tab-logbook" class="hidden">
     <div class="section-header">
       <div class="card-title" style="margin-bottom:0;">Log entries</div>
       <span class="count-badge" id="entry-count">0 entries</span>
     </div>
     <div id="history-list"></div>
-    <div class="empty-state hidden" id="no-entries">No entries yet.<br>Start logging from the Log tab.</div>
+    <div class="empty-state hidden" id="no-entries">No entries yet.<br>Start from the Log tab.</div>
     <div class="export-row">
       <button class="btn btn-ghost" onclick="exportCSV()">Export CSV</button>
       <button class="btn btn-ghost" onclick="clearLogs()">Clear all</button>
@@ -293,121 +334,96 @@ select option{background:var(--bg2);}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const OB = {lat:41.2931, lon:-82.2174, name:'Oberlin'};
+// ── Config ──────────────────────────────────────────────
+const OB  = {lat:41.2931, lon:-82.2174, name:'Oberlin'};
 const CIN = {lat:39.1031, lon:-84.5120, name:'Cincinnati'};
-const STORAGE_KEY = 'oberlin_wx_v2';
+const STORAGE_KEY = 'oberlin_wx_v3';
 
-let wxOb = {}, wxCin = {}, aqiOb = {}, aqiCin = {};
-let logs = [], selectedTags = new Set();
-let map, radarLayer, radarFrames = [];
+// ── State ────────────────────────────────────────────────
+let wxOb={}, wxCin={}, logs=[], selectedTags=new Set();
+let map, radarLayers=[], radarFrames=[], frameIdx=0, playing=false, playInterval, radarOpacity=0.75;
 
-// Clock
-function updateClock() {
-  const n = new Date();
-  document.getElementById('clock').childNodes[0].textContent =
-    n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-  document.getElementById('dateline').textContent =
-    n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+// ── Clock ────────────────────────────────────────────────
+function updateClock(){
+  const n=new Date();
+  document.getElementById('clock').textContent=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  document.getElementById('dateline').textContent=n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
 }
-setInterval(updateClock, 1000); updateClock();
+setInterval(updateClock,1000); updateClock();
 
-function switchTab(name) {
-  ['now','compare','radar','log','hypotheses','history'].forEach(t => {
-    document.getElementById('tab-'+t).classList.toggle('hidden', t !== name);
-  });
-  document.querySelectorAll('.tab').forEach((el,i) => {
-    el.classList.toggle('active', ['now','compare','radar','log','hypotheses','history'][i] === name);
-  });
-  if (name === 'radar' && !map) initRadar();
-  if (name === 'hypotheses') renderHypotheses();
-  if (name === 'history') renderHistory();
-  if (name === 'compare') renderCompare();
-  if (name === 'log') updateWxPreview();
+// ── Tabs ─────────────────────────────────────────────────
+const TAB_IDS=['now','radar','history-wx','compare','log','hypotheses','logbook'];
+function switchTab(name){
+  TAB_IDS.forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==name));
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',TAB_IDS[i]===name));
+  if(name==='radar'&&!map) initRadar();
+  if(name==='history-wx') loadHistorical();
+  if(name==='hypotheses') renderHypotheses();
+  if(name==='logbook') renderLogbook();
+  if(name==='compare'){renderCompare();renderDivHistory();}
+  if(name==='log') updateWxPreview();
 }
 
-function togglePill(el) {
-  el.classList.toggle('on');
-  const v = el.dataset.val;
-  selectedTags.has(v) ? selectedTags.delete(v) : selectedTags.add(v);
+// ── Utils ────────────────────────────────────────────────
+function windDir(deg){return['N','NE','E','SE','S','SW','W','NW'][Math.round(deg/45)%8];}
+function fmt(v){return(v>0?'+':'')+v;}
+function dClass(v){return v>2?'dpos':v<-2?'dneg':'dzero';}
+
+// ── Weather fetch ────────────────────────────────────────
+async function fetchWx(city){
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=7`;
+  const d=await(await fetch(url)).json(); const c=d.current;
+  return{temp:Math.round(c.temperature_2m),feels:Math.round(c.apparent_temperature),
+    hum:Math.round(c.relative_humidity_2m),wind:Math.round(c.wind_speed_10m),
+    wdir:windDir(c.wind_direction_10m),wdeg:Math.round(c.wind_direction_10m),
+    precip:c.precipitation.toFixed(2),pres:Math.round(c.surface_pressure),daily:d.daily};
+}
+async function fetchAQI(city){
+  const d=await(await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${city.lat}&longitude=${city.lon}&current=us_aqi,pm2_5&timezone=America%2FNew_York`)).json();
+  return{aqi:Math.round(d.current.us_aqi),pm25:d.current.pm2_5?.toFixed(1)};
 }
 
-function windDir(deg) {
-  return ['N','NE','E','SE','S','SW','W','NW'][Math.round(deg/45)%8];
-}
-
-async function fetchWeather(city) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=7`;
-  const r = await fetch(url);
-  const d = await r.json();
-  const c = d.current;
-  return {
-    temp: Math.round(c.temperature_2m),
-    feels: Math.round(c.apparent_temperature),
-    hum: Math.round(c.relative_humidity_2m),
-    wind: Math.round(c.wind_speed_10m),
-    wdir: windDir(c.wind_direction_10m),
-    wdeg: Math.round(c.wind_direction_10m),
-    precip: c.precipitation.toFixed(2),
-    pres: Math.round(c.surface_pressure),
-    daily: d.daily
-  };
-}
-
-async function fetchAQI(city) {
-  const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${city.lat}&longitude=${city.lon}&current=us_aqi,pm2_5&timezone=America%2FNew_York`;
-  const r = await fetch(url);
-  const d = await r.json();
-  return { aqi: Math.round(d.current.us_aqi), pm25: d.current.pm2_5?.toFixed(1) };
-}
-
-async function loadAll() {
-  try {
-    [wxOb, wxCin] = await Promise.all([fetchWeather(OB), fetchWeather(CIN)]);
-    [aqiOb, aqiCin] = await Promise.all([fetchAQI(OB), fetchAQI(CIN)]);
-    Object.assign(wxOb, aqiOb);
-    Object.assign(wxCin, aqiCin);
-    renderNow();
-    renderCompareDeltas();
-    updateWxPreview();
-  } catch(e) {
-    document.getElementById('metrics').innerHTML =
-      '<p style="color:var(--danger);font-size:13px;">Weather data unavailable — check connection.</p>';
+async function loadAll(){
+  try{
+    const [wo,wc,ao,ac]=await Promise.all([fetchWx(OB),fetchWx(CIN),fetchAQI(OB),fetchAQI(CIN)]);
+    wxOb={...wo,...ao}; wxCin={...wc,...ac};
+    renderNow(); renderCompareDeltas(); updateWxPreview();
+  }catch(e){
+    document.getElementById('metrics').innerHTML='<p style="color:var(--danger);font-size:13px;">Weather data unavailable.</p>';
   }
 }
 
-function renderNow() {
-  document.getElementById('m-temp').textContent = wxOb.temp + '°F';
-  document.getElementById('m-feels').textContent = 'feels like ' + wxOb.feels + '°';
-  document.getElementById('m-hum').textContent = wxOb.hum + '%';
-  document.getElementById('m-wind').textContent = wxOb.wind + ' mph';
-  document.getElementById('m-wdir').textContent = wxOb.wdir;
-  document.getElementById('m-precip').textContent = wxOb.precip + '"';
-  document.getElementById('m-pres').textContent = wxOb.pres;
-
+// ── Now tab ──────────────────────────────────────────────
+function renderNow(){
+  document.getElementById('m-temp').textContent=wxOb.temp+'°F';
+  document.getElementById('m-feels').textContent='feels like '+wxOb.feels+'°';
+  document.getElementById('m-hum').textContent=wxOb.hum+'%';
+  document.getElementById('m-wind').textContent=wxOb.wind+' mph';
+  document.getElementById('m-wdir').textContent=wxOb.wdir;
+  document.getElementById('m-precip').textContent=wxOb.precip+'"';
+  document.getElementById('m-pres').textContent=wxOb.pres;
   // AQI
-  const aqi = wxOb.aqi;
-  let cat, note, col;
-  if (!aqi) { cat='--'; note=''; col='var(--text3)'; }
-  else if (aqi<=50) { cat='GOOD'; note='Air quality satisfactory.'; col='#00e400'; }
-  else if (aqi<=100) { cat='MODERATE'; note='Acceptable. Note if hazy.'; col='#c8c800'; }
-  else if (aqi<=150) { cat='USG'; note='⚠ Elevated — possible smoke transport. Log visibility.'; col='#ff7e00'; }
-  else if (aqi<=200) { cat='UNHEALTHY'; note='🔴 Significant AQI event. Canadian wildfire smoke likely.'; col='#ff0000'; }
-  else { cat='VERY UNHEALTHY+'; note='🔴 Hazardous. Document everything.'; col='#8f3f97'; }
-  document.getElementById('aqi-num').textContent = aqi||'--';
-  document.getElementById('aqi-num').style.color = col;
-  document.getElementById('aqi-cat').textContent = cat;
-  document.getElementById('aqi-pm').textContent = wxOb.pm25 ? 'PM2.5: ' + wxOb.pm25 + ' μg/m³' : '';
-  document.getElementById('aqi-note').textContent = note;
-  if (aqi) document.getElementById('aqi-needle').style.left = Math.min(98,(aqi/300)*100) + '%';
-
+  const aqi=wxOb.aqi;
+  let cat,note,col;
+  if(!aqi){cat='--';note='';col='var(--text3)';}
+  else if(aqi<=50){cat='GOOD';note='Air quality satisfactory.';col='#00e400';}
+  else if(aqi<=100){cat='MODERATE';note='Acceptable. Note if hazy.';col='#c8c800';}
+  else if(aqi<=150){cat='USG';note='⚠ Elevated — possible smoke transport. Log visibility.';col='#ff7e00';}
+  else if(aqi<=200){cat='UNHEALTHY';note='🔴 Significant AQI event. Canadian wildfire smoke likely.';col='#ff0000';}
+  else{cat='VERY UNHEALTHY+';note='🔴 Hazardous. Document everything.';col='#8f3f97';}
+  document.getElementById('aqi-num').textContent=aqi||'--';
+  document.getElementById('aqi-num').style.color=col;
+  document.getElementById('aqi-cat').textContent=cat;
+  document.getElementById('aqi-pm').textContent=wxOb.pm25?'PM2.5: '+wxOb.pm25+' μg/m³':'';
+  document.getElementById('aqi-note').textContent=note;
+  if(aqi) document.getElementById('aqi-needle').style.left=Math.min(98,(aqi/300)*100)+'%';
   // Forecast
-  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const fc = document.getElementById('forecast'); fc.innerHTML = '';
-  for (let i=0;i<7;i++) {
-    const dt = new Date(wxOb.daily.time[i]+'T12:00:00');
-    const lbl = i===0?'Today':days[dt.getDay()];
-    fc.innerHTML += `<div class="forecast-day">
-      <div class="f-day">${lbl}</div>
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const fc=document.getElementById('forecast'); fc.innerHTML='';
+  for(let i=0;i<7;i++){
+    const dt=new Date(wxOb.daily.time[i]+'T12:00:00');
+    fc.innerHTML+=`<div class="forecast-day">
+      <div class="f-day">${i===0?'Today':days[dt.getDay()]}</div>
       <div class="f-high">${Math.round(wxOb.daily.temperature_2m_max[i])}°</div>
       <div class="f-low">${Math.round(wxOb.daily.temperature_2m_min[i])}°</div>
       <div class="f-rain">${wxOb.daily.precipitation_probability_max[i]}%</div>
@@ -416,280 +432,414 @@ function renderNow() {
   updateSignals();
 }
 
-function updateSignals() {
-  const sigs = [];
-  const fromLandfill = ['S','SW'].includes(wxOb.wdir) || (wxOb.wdeg>=157 && wxOb.wdeg<=247);
-  sigs.push({icon:'🏭', label:`Wind ${wxOb.wind} mph from ${wxOb.wdir}`,
-    note: fromLandfill ? '⚠ Wind from landfill direction (S/SW) — methane odor possible.' : 'Wind not from landfill direction.',
-    alert: fromLandfill});
-  if (wxOb.aqi != null) sigs.push({icon:'🌫', label:`AQI ${wxOb.aqi}${wxOb.pm25?' · PM2.5 '+wxOb.pm25:''}`,
-    note: wxOb.aqi>100 ? '⚠ Elevated AQI — possible Canadian wildfire smoke.' : 'AQI within normal range.',
-    alert: wxOb.aqi>100});
-  const risk = wxOb.hum>70 && wxOb.temp>78;
-  sigs.push({icon:'⛈', label:`${wxOb.temp}°F · ${wxOb.hum}% RH · ${wxOb.pres} hPa`,
-    note: risk ? '⚠ High heat + humidity — convective instability elevated. Radar-invisible cell risk.' : 'Convective risk low.',
-    alert: risk});
-  document.getElementById('signals').innerHTML = sigs.map(s =>
+function updateSignals(){
+  const fromLandfill=['S','SW'].includes(wxOb.wdir)||(wxOb.wdeg>=157&&wxOb.wdeg<=247);
+  const risk=wxOb.hum>70&&wxOb.temp>78;
+  const sigs=[
+    {icon:'🏭',label:`Wind ${wxOb.wind} mph from ${wxOb.wdir}`,
+     note:fromLandfill?'⚠ Wind from landfill direction (S/SW) — methane odor possible.':'Wind not from landfill direction.',alert:fromLandfill},
+    {icon:'🌫',label:`AQI ${wxOb.aqi||'--'}${wxOb.pm25?' · PM2.5 '+wxOb.pm25:''}`,
+     note:wxOb.aqi>100?'⚠ Elevated AQI — possible Canadian wildfire smoke.':'AQI within normal range.',alert:wxOb.aqi>100},
+    {icon:'⛈',label:`${wxOb.temp}°F · ${wxOb.hum}% RH · ${wxOb.pres} hPa`,
+     note:risk?'⚠ High heat + humidity — convective instability elevated. Radar-invisible cell risk.':'Convective risk low.',alert:risk}
+  ];
+  document.getElementById('signals').innerHTML=sigs.map(s=>
     `<div class="signal${s.alert?' alert':''}">
       <div class="signal-icon">${s.icon}</div>
       <div><div class="signal-label">${s.label}</div><div class="signal-note">${s.note}</div></div>
     </div>`).join('');
 }
 
-function renderCompareDeltas() {
-  if (!wxOb.temp || !wxCin.temp) return;
-  const dTemp = wxOb.temp - wxCin.temp;
-  const dHum = wxOb.hum - wxCin.hum;
-  const dAqi = (wxOb.aqi||0) - (wxCin.aqi||0);
-  const dWind = wxOb.wind - wxCin.wind;
-
-  function deltaClass(v) { return v > 2 ? 'delta-pos' : v < -2 ? 'delta-neg' : 'delta-zero'; }
-  function fmt(v) { return (v>0?'+':'')+v; }
-
-  document.getElementById('d-temp').textContent = fmt(dTemp) + '°F';
-  document.getElementById('d-temp').className = 'delta-val ' + deltaClass(dTemp);
-  document.getElementById('d-hum').textContent = fmt(dHum) + '%';
-  document.getElementById('d-hum').className = 'delta-val ' + deltaClass(dHum);
-  document.getElementById('d-aqi').textContent = fmt(dAqi);
-  document.getElementById('d-aqi').className = 'delta-val ' + deltaClass(dAqi);
-  document.getElementById('d-wind').textContent = fmt(dWind) + ' mph';
-  document.getElementById('d-wind').className = 'delta-val ' + deltaClass(dWind);
-}
-
-function renderCompare() {
-  renderCompareDeltas();
-  const fields = [
-    ['Temperature', wxOb.temp+'°F', wxCin.temp+'°F'],
-    ['Feels like', wxOb.feels+'°F', wxCin.feels+'°F'],
-    ['Humidity', wxOb.hum+'%', wxCin.hum+'%'],
-    ['Wind', wxOb.wind+' mph '+wxOb.wdir, wxCin.wind+' mph '+wxCin.wdir],
-    ['Precipitation', wxOb.precip+'"', wxCin.precip+'"'],
-    ['Pressure', wxOb.pres+' hPa', wxCin.pres+' hPa'],
-    ['AQI', wxOb.aqi||'--', wxCin.aqi||'--'],
-    ['PM2.5', (wxOb.pm25||'--')+' μg/m³', (wxCin.pm25||'--')+' μg/m³'],
-  ];
-  document.getElementById('ob-cmp-rows').innerHTML = fields.map(f =>
-    `<div class="cmp-metric"><span class="cmp-label">${f[0]}</span><span class="cmp-val" style="color:var(--accent)">${f[1]}</span></div>`).join('');
-  document.getElementById('cin-cmp-rows').innerHTML = fields.map(f =>
-    `<div class="cmp-metric"><span class="cmp-label">${f[0]}</span><span class="cmp-val" style="color:var(--cin)">${f[2]}</span></div>`).join('');
-
-  // Divergence history
-  const el = document.getElementById('divergence-history');
-  const noEl = document.getElementById('no-divergence');
-  const withDelta = logs.filter(l => l.wxCin && l.weather);
-  if (withDelta.length === 0) { el.innerHTML=''; noEl.classList.remove('hidden'); return; }
-  noEl.classList.add('hidden');
-  el.innerHTML = withDelta.slice(0,20).map(e => {
-    const ob = e.weather, cin = e.wxCin;
-    const dT = ob.temp - cin.temp;
-    const dH = ob.hum - cin.hum;
-    const dA = (ob.aqi||0) - (cin.aqi||0);
-    const score = Math.abs(dT) + Math.abs(dH*0.5) + Math.abs(dA*0.1);
-    const d = new Date(e.ts);
-    const ds = d.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' +
-               d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    const scoreCol = score > 15 ? 'var(--danger)' : score > 8 ? 'var(--warn)' : 'var(--text3)';
-    const parts = [];
-    if (Math.abs(dT)>=2) parts.push(`temp ${dT>0?'+':''}${dT}°`);
-    if (Math.abs(dH)>=5) parts.push(`humidity ${dH>0?'+':''}${dH}%`);
-    if (Math.abs(dA)>=10) parts.push(`AQI ${dA>0?'+':''}${dA}`);
-    return `<div class="div-entry">
-      <span class="div-ts">${ds}</span>
-      <span class="div-vals">${parts.length ? parts.join(' · ') : 'minimal divergence'}</span>
-      <span class="div-score" style="color:${scoreCol}">${Math.round(score)}</span>
-    </div>`;
-  }).join('');
-}
-
-// Radar
-function initRadar() {
-  map = L.map('radar-map',{zoomControl:true,attributionControl:false}).setView([OB.lat,OB.lon],9);
+// ── Radar ────────────────────────────────────────────────
+function initRadar(){
+  map=L.map('radar-map',{zoomControl:true,attributionControl:false}).setView([OB.lat,OB.lon],8);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(map);
-  L.circleMarker([OB.lat,OB.lon],{radius:7,color:'#4af0c4',fillColor:'#4af0c4',fillOpacity:.8,weight:2})
+  L.circleMarker([OB.lat,OB.lon],{radius:7,color:'#4af0c4',fillColor:'#4af0c4',fillOpacity:.9,weight:2})
     .bindTooltip('Oberlin',{permanent:true,direction:'right'}).addTo(map);
-  L.circleMarker([CIN.lat,CIN.lon],{radius:6,color:'#c084fc',fillColor:'#c084fc',fillOpacity:.8,weight:2})
+  L.circleMarker([CIN.lat,CIN.lon],{radius:6,color:'#c084fc',fillColor:'#c084fc',fillOpacity:.9,weight:2})
     .bindTooltip('Cincinnati',{permanent:true,direction:'right'}).addTo(map);
   loadRainViewer();
 }
 
-async function loadRainViewer() {
-  try {
-    const r = await fetch('https://api.rainviewer.com/public/weather-maps.json');
-    const d = await r.json();
-    radarFrames = d.radar.past.slice(-6);
-    if (d.radar.nowcast) radarFrames = radarFrames.concat(d.radar.nowcast.slice(0,2));
-    if (radarLayer) map.removeLayer(radarLayer);
-    radarLayer = L.tileLayer(
-      `https://tilecache.rainviewer.com${radarFrames[radarFrames.length-1].path}/256/{z}/{x}/{y}/2/1_1.png`,
-      {opacity:.75,maxZoom:15});
-    radarLayer.addTo(map);
-    document.getElementById('radar-ts').textContent =
-      `${radarFrames.length} frames · RainViewer · Both cities marked`;
-  } catch(e) {
-    document.getElementById('radar-ts').textContent = 'Radar unavailable';
+async function loadRainViewer(){
+  try{
+    const d=await(await fetch('https://api.rainviewer.com/public/weather-maps.json')).json();
+    radarFrames=d.radar.past.slice(-8);
+    if(d.radar.nowcast) radarFrames=radarFrames.concat(d.radar.nowcast.slice(0,2));
+    // Pre-create all layers
+    radarLayers=radarFrames.map(f=>
+      L.tileLayer(`https://tilecache.rainviewer.com${f.path}/256/{z}/{x}/{y}/2/1_1.png`,
+        {opacity:radarOpacity,maxZoom:15,pane:'overlayPane'}));
+    const slider=document.getElementById('frame-slider');
+    slider.max=radarFrames.length-1; slider.value=radarFrames.length-1;
+    showFrame(radarFrames.length-1);
+  }catch(e){document.getElementById('radar-ts').textContent='Radar unavailable';}
+}
+
+function showFrame(idx){
+  frameIdx=idx;
+  radarLayers.forEach((l,i)=>{
+    if(i===idx){if(!map.hasLayer(l)) l.addTo(map);}
+    else{if(map.hasLayer(l)) map.removeLayer(l);}
+  });
+  document.getElementById('frame-slider').value=idx;
+  if(radarFrames[idx]){
+    const t=new Date(radarFrames[idx].time*1000);
+    const isPast=idx<radarFrames.length-2;
+    document.getElementById('radar-ts').textContent=
+      (isPast?'':'NOW · ')+t.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})+
+      (idx>=radarFrames.length-2?' (nowcast)':'');
   }
 }
 
-function setRadarLayer(type) {
-  document.querySelectorAll('.radar-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('btn-'+type).classList.add('active');
-  if (type === 'precip') loadRainViewer();
+function scrubFrame(val){
+  if(playing) stopPlay();
+  showFrame(parseInt(val));
 }
 
-// Log
-function updateWxPreview() {
-  if (!wxOb.temp) return;
-  document.getElementById('wx-preview').textContent =
-    `Oberlin: ${wxOb.temp}°F · ${wxOb.hum}% RH · AQI ${wxOb.aqi||'--'} | Cincinnati: ${wxCin.temp||'--'}°F · ${wxCin.hum||'--'}% RH · AQI ${wxCin.aqi||'--'}`;
+function togglePlay(){
+  playing?stopPlay():startPlay();
+}
+function startPlay(){
+  playing=true;
+  document.getElementById('play-btn').textContent='⏸ Pause';
+  playInterval=setInterval(()=>{
+    const next=(frameIdx+1)%radarFrames.length;
+    showFrame(next);
+  },600);
+}
+function stopPlay(){
+  playing=false;
+  document.getElementById('play-btn').textContent='▶ Play';
+  clearInterval(playInterval);
+}
+function setOpacity(v){
+  radarOpacity=v;
+  radarLayers.forEach(l=>l.setOpacity(v));
+  document.querySelectorAll('.radar-btn').forEach(b=>b.classList.remove('active'));
+  const map_={0.75:'precip',1:'bright',0.4:'dim'};
+  const el=document.getElementById('btn-'+(map_[v]||'precip'));
+  if(el) el.classList.add('active');
 }
 
-function loadLogs() {
-  try { const r = localStorage.getItem(STORAGE_KEY); logs = r ? JSON.parse(r) : []; }
-  catch(e) { logs = []; }
+// ── Historical Weather ───────────────────────────────────
+let histLoaded=false;
+async function loadHistorical(){
+  if(histLoaded) return;
+  const loading=document.getElementById('hist-loading');
+  const content=document.getElementById('hist-content');
+  try{
+    const today=new Date();
+    const todayStr=today.toISOString().slice(0,10);
+    // Dates for last year same day
+    const lastYear=new Date(today); lastYear.setFullYear(today.getFullYear()-1);
+    const ly=lastYear.toISOString().slice(0,10);
+    // 5 year range
+    const fiveYearsAgo=new Date(today); fiveYearsAgo.setFullYear(today.getFullYear()-5);
+    const fy=fiveYearsAgo.toISOString().slice(0,10);
+    // All time records — use full archive
+    const allTimeStart='1940-01-01';
+
+    // Current conditions already in wxOb
+    // Last year same date
+    const lyUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${ly}&end_date=${ly}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FNew_York`;
+    // 5-year average: fetch this date range ±2 days each year for 5 years and average
+    const avgUrls=[];
+    for(let y=1;y<=5;y++){
+      const d1=new Date(today); d1.setFullYear(today.getFullYear()-y);
+      avgUrls.push(`https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${d1.toISOString().slice(0,10)}&end_date=${d1.toISOString().slice(0,10)}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FNew_York`);
+    }
+    // All time records for this month
+    const thisMonth=todayStr.slice(0,7);
+    const recUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=1980-01-01&end_date=${todayStr}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York`;
+    // This week forecast for chart
+    const weekUrl=`https://api.open-meteo.com/v1/forecast?latitude=${OB.lat}&longitude=${OB.lon}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=7`;
+
+    const [lyData, ...avgDataArr]=await Promise.all([
+      fetch(lyUrl).then(r=>r.json()),
+      ...avgUrls.map(u=>fetch(u).then(r=>r.json()))
+    ]);
+
+    // Last year values
+    const lyHigh=Math.round(lyData.daily.temperature_2m_max[0]);
+    const lyLow=Math.round(lyData.daily.temperature_2m_min[0]);
+    const lyPrecip=lyData.daily.precipitation_sum[0]?.toFixed(2)||'0.00';
+
+    // 5-year average
+    const avgHighs=avgDataArr.map(d=>d.daily.temperature_2m_max[0]).filter(Boolean);
+    const avgLows=avgDataArr.map(d=>d.daily.temperature_2m_min[0]).filter(Boolean);
+    const avgHigh=avgHighs.length?Math.round(avgHighs.reduce((a,b)=>a+b,0)/avgHighs.length):null;
+    const avgLow=avgLows.length?Math.round(avgLows.reduce((a,b)=>a+b,0)/avgLows.length):null;
+
+    // Records — fetch last 45 years, find max/min for this calendar month/day ±7 days
+    const recData=await fetch(recUrl).then(r=>r.json());
+    const tod_mmdd=todayStr.slice(5);
+    let recHigh=-999, recHighYear='', recLow=999, recLowYear='';
+    recData.daily.time.forEach((t,i)=>{
+      const mmdd=t.slice(5);
+      // Within 7 days of today's calendar date
+      const tDate=new Date(t+'T12:00:00');
+      const todDate=new Date(todayStr+'T12:00:00');
+      todDate.setFullYear(tDate.getFullYear());
+      const diff=Math.abs(tDate-todDate)/(1000*60*60*24);
+      if(diff<=3){
+        const h=recData.daily.temperature_2m_max[i];
+        const l=recData.daily.temperature_2m_min[i];
+        if(h&&h>recHigh){recHigh=Math.round(h);recHighYear=t.slice(0,4);}
+        if(l&&l<recLow){recLow=Math.round(l);recLowYear=t.slice(0,4);}
+      }
+    });
+
+    const todayHigh=wxOb.daily?Math.round(wxOb.daily.temperature_2m_max[0]):null;
+    const todayLow=wxOb.daily?Math.round(wxOb.daily.temperature_2m_min[0]):null;
+    const tempAnomaly=avgHigh&&todayHigh?todayHigh-avgHigh:null;
+
+    // Render columns
+    const cols=document.getElementById('hist-cols');
+    cols.innerHTML=`
+      <div class="hist-col">
+        <div class="hist-col-title">📅 Today's forecast</div>
+        <div class="hist-row"><span class="hist-label">High</span><span class="hist-val${todayHigh&&avgHigh&&todayHigh>avgHigh+3?' hot':''}">${todayHigh||'--'}°F</span></div>
+        <div class="hist-row"><span class="hist-label">Low</span><span class="hist-val">${todayLow||'--'}°F</span></div>
+        <div class="hist-row"><span class="hist-label">Current</span><span class="hist-val">${wxOb.temp||'--'}°F</span></div>
+        <div class="hist-row"><span class="hist-label">Humidity</span><span class="hist-val">${wxOb.hum||'--'}%</span></div>
+        <div class="hist-row"><span class="hist-label">AQI</span><span class="hist-val">${wxOb.aqi||'--'}</span></div>
+      </div>
+      <div class="hist-col">
+        <div class="hist-col-title">📆 This date last year</div>
+        <div class="hist-row"><span class="hist-label">High</span><span class="hist-val">${lyHigh}°F</span></div>
+        <div class="hist-row"><span class="hist-label">Low</span><span class="hist-val">${lyLow}°F</span></div>
+        <div class="hist-row"><span class="hist-label">Precip</span><span class="hist-val">${lyPrecip}"</span></div>
+        <div class="hist-row"><span class="hist-label">vs Today</span><span class="hist-val ${todayHigh&&lyHigh&&todayHigh-lyHigh>3?'hot':todayHigh&&lyHigh&&todayHigh-lyHigh<-3?'cold':''}">${todayHigh&&lyHigh?fmt(todayHigh-lyHigh)+'°':'--'}</span></div>
+      </div>
+      <div class="hist-col">
+        <div class="hist-col-title">📊 5-year average</div>
+        <div class="hist-row"><span class="hist-label">Avg high</span><span class="hist-val">${avgHigh||'--'}°F</span></div>
+        <div class="hist-row"><span class="hist-label">Avg low</span><span class="hist-val">${avgLow||'--'}°F</span></div>
+        <div class="hist-row"><span class="hist-label">Anomaly</span><span class="hist-val ${tempAnomaly>3?'hot':tempAnomaly<-3?'cold':''}">${tempAnomaly!=null?fmt(tempAnomaly)+'°':'--'}</span></div>
+        <div class="hist-row"><span class="hist-label">Record high</span>
+          <span class="hist-val hot">${recHigh>-999?recHigh+'°F':'--'}<span class="record-badge record-high">${recHighYear}</span></span></div>
+        <div class="hist-row"><span class="hist-label">Record low</span>
+          <span class="hist-val cold">${recLow<999?recLow+'°F':'--'}<span class="record-badge record-low">${recLowYear}</span></span></div>
+      </div>`;
+
+    // Anomaly bar
+    const anomEl=document.getElementById('anomaly-section');
+    if(tempAnomaly!=null){
+      const pct=Math.min(100,Math.abs(tempAnomaly)/15*100);
+      const col=tempAnomaly>0?'var(--danger)':'var(--blue)';
+      const msg=tempAnomaly>5?`Running ${tempAnomaly}°F above the 5-year average — notable warming signal.`
+               :tempAnomaly<-5?`Running ${Math.abs(tempAnomaly)}°F below average.`
+               :`Within ${Math.abs(tempAnomaly)}°F of the 5-year average — typical for this date.`;
+      anomEl.innerHTML=`<div style="font-size:13px;color:var(--text2);margin-bottom:8px;">${msg}</div>
+        <div class="anomaly-bar"><div class="anomaly-fill" style="width:${pct}%;background:${col};"></div></div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:4px;">
+          ${tempAnomaly>0?'+':''}${tempAnomaly}°F vs 5-year avg · ${recHigh>-999?'Record high '+recHigh+'°F ('+recHighYear+')':''}
+        </div>`;
+    } else { anomEl.textContent='Insufficient data.'; }
+
+    // Week highs mini chart
+    if(wxOb.daily){
+      const wrow=document.getElementById('hist-week-row'); wrow.innerHTML='';
+      const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      for(let i=0;i<7;i++){
+        const dt=new Date(wxOb.daily.time[i]+'T12:00:00');
+        const high=Math.round(wxOb.daily.temperature_2m_max[i]);
+        const aboveAvg=avgHigh&&high>avgHigh;
+        wrow.innerHTML+=`<div class="forecast-day">
+          <div class="f-day">${i===0?'Today':days[dt.getDay()]}</div>
+          <div class="f-high" style="color:${aboveAvg?'var(--danger)':'var(--text)'}">${high}°</div>
+          <div class="f-low">${Math.round(wxOb.daily.temperature_2m_min[i])}°</div>
+          ${aboveAvg?`<div style="font-size:9px;color:var(--danger);margin-top:2px;">+${high-avgHigh}° avg</div>`:''}
+        </div>`;
+      }
+    }
+
+    loading.classList.add('hidden');
+    content.classList.remove('hidden');
+    histLoaded=true;
+  }catch(e){
+    loading.textContent='Historical data unavailable — check connection.';
+  }
 }
 
-function saveLogs() { localStorage.setItem(STORAGE_KEY, JSON.stringify(logs)); }
-
-function saveLog() {
-  const entry = {
-    ts: new Date().toISOString(),
-    note: document.getElementById('log-note').value.trim(),
-    tags: [...selectedTags],
-    rain: document.getElementById('log-rain').value,
-    vis: document.getElementById('log-vis').value,
-    weather: { ...wxOb },
-    wxCin: { ...wxCin }
-  };
-  logs.unshift(entry); saveLogs();
-  const s = document.getElementById('log-status');
-  s.textContent = '✓ Saved — ' + new Date().toLocaleString();
-  document.getElementById('log-note').value = '';
-  document.getElementById('log-rain').value = '';
-  document.getElementById('log-vis').value = 'clear';
-  selectedTags.clear();
-  document.querySelectorAll('.pill').forEach(p => p.classList.remove('on'));
+// ── Compare ──────────────────────────────────────────────
+function renderCompareDeltas(){
+  if(!wxOb.temp||!wxCin.temp) return;
+  const dT=wxOb.temp-wxCin.temp, dH=wxOb.hum-wxCin.hum;
+  const dA=(wxOb.aqi||0)-(wxCin.aqi||0), dW=wxOb.wind-wxCin.wind;
+  [['d-temp',dT,'°F'],['d-hum',dH,'%'],['d-aqi',dA,''],['d-wind',dW,' mph']].forEach(([id,v,unit])=>{
+    const el=document.getElementById(id);
+    el.textContent=fmt(v)+unit; el.className='delta-val '+dClass(v);
+  });
 }
-
-// Hypotheses
-function renderHypotheses() {
-  const total = logs.length;
-  const withDelta = logs.filter(l => l.wxCin && l.weather);
-  const avgTempDelta = withDelta.length
-    ? (withDelta.reduce((a,l) => a + (l.weather.temp - l.wxCin.temp), 0) / withDelta.length).toFixed(1)
-    : null;
-
-  const hypos = [
-    { title:'01 / Landfill methane microclimate', cls:'methane-border',
-      desc:'Republic Services landfill emits methane that may affect local heat retention, fog, and odor — especially when wind is S/SW.',
-      tag:'methane', alt:'wind-shift',
-      detail: () => {
-        const m = logs.filter(l=>l.tags.includes('methane'));
-        const sw = m.filter(l=>['S','SW'].includes(l.weather?.wdir)).length;
-        return m.length ? `${sw}/${m.length} methane events had S/SW wind.` : '';
-      }},
-    { title:'02 / Canadian wildfire smoke transport', cls:'smoke-border',
-      desc:'Smoke plumes create AQI events over Oberlin. Compare AQI delta vs Cincinnati to isolate local vs regional smoke.',
-      tag:'smoke', alt:null,
-      detail: () => {
-        const s = logs.filter(l=>l.tags.includes('smoke'));
-        const higherThanCin = s.filter(l => l.weather?.aqi && l.wxCin?.aqi && l.weather.aqi > l.wxCin.aqi + 15).length;
-        return s.length ? `${higherThanCin}/${s.length} smoke events: Oberlin AQI was 15+ pts above Cincinnati.` : '';
-      }},
-    { title:'03 / Sub-radar convective downpours', cls:'radar-border',
-      desc:'Sudden heavy rain develops faster than NEXRAD refresh cycles. High heat + humidity may be precursors. Compare to Cincinnati temps during events.',
-      tag:'radar-miss', alt:null,
-      detail: () => {
-        const r = logs.filter(l=>l.tags.includes('radar-miss'));
-        const hotter = r.filter(l => l.weather?.temp && l.wxCin?.temp && l.weather.temp > l.wxCin.temp + 3).length;
-        return r.length ? `${hotter}/${r.length} radar-miss events: Oberlin was 3°F+ hotter than Cincinnati.` : '';
-      }}
+function renderCompare(){
+  renderCompareDeltas();
+  const fields=[
+    ['Temperature',wxOb.temp+'°F',wxCin.temp+'°F'],
+    ['Feels like',wxOb.feels+'°F',wxCin.feels+'°F'],
+    ['Humidity',wxOb.hum+'%',wxCin.hum+'%'],
+    ['Wind',wxOb.wind+' mph '+wxOb.wdir,wxCin.wind+' mph '+wxCin.wdir],
+    ['Precipitation',wxOb.precip+'"',wxCin.precip+'"'],
+    ['Pressure',wxOb.pres+' hPa',wxCin.pres+' hPa'],
+    ['AQI',wxOb.aqi||'--',wxCin.aqi||'--'],
+    ['PM2.5',(wxOb.pm25||'--')+' μg/m³',(wxCin.pm25||'--')+' μg/m³'],
   ];
+  document.getElementById('ob-rows').innerHTML=fields.map(f=>
+    `<div class="cmp-row"><span class="cmp-label">${f[0]}</span><span class="cmp-val" style="color:var(--accent)">${f[1]}</span></div>`).join('');
+  document.getElementById('cin-rows').innerHTML=fields.map(f=>
+    `<div class="cmp-row"><span class="cmp-label">${f[0]}</span><span class="cmp-val" style="color:var(--cin)">${f[2]}</span></div>`).join('');
+}
+function renderDivHistory(){
+  const el=document.getElementById('div-history');
+  const noEl=document.getElementById('no-div');
+  const withDelta=logs.filter(l=>l.wxCin&&l.weather);
+  if(!withDelta.length){el.innerHTML='';noEl.classList.remove('hidden');return;}
+  noEl.classList.add('hidden');
+  el.innerHTML=withDelta.slice(0,15).map(e=>{
+    const o=e.weather,c=e.wxCin;
+    const dT=o.temp-c.temp, dH=o.hum-c.hum, dA=(o.aqi||0)-(c.aqi||0);
+    const score=Math.abs(dT)+Math.abs(dH*.5)+Math.abs(dA*.1);
+    const col=score>15?'var(--danger)':score>8?'var(--warn)':'var(--text3)';
+    const d=new Date(e.ts);
+    const parts=[];
+    if(Math.abs(dT)>=2) parts.push(`temp ${fmt(dT)}°`);
+    if(Math.abs(dH)>=5) parts.push(`hum ${fmt(dH)}%`);
+    if(Math.abs(dA)>=10) parts.push(`AQI ${fmt(dA)}`);
+    return`<div style="display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--text3);flex-shrink:0;min-width:110px;">
+        ${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})} ${d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span>
+      <span style="color:var(--text2);flex:1;">${parts.length?parts.join(' · '):'minimal divergence'}</span>
+      <span style="font-family:var(--mono);font-size:12px;font-weight:500;color:${col}">${Math.round(score)}</span>
+    </div>`;
+  }).join('');
+}
 
-  document.getElementById('hypo-list').innerHTML = hypos.map(h => {
-    const count = logs.filter(l => l.tags.includes(h.tag)||(h.alt&&l.tags.includes(h.alt))).length;
-    const pct = total > 0 ? count/total : 0;
-    const detail = h.detail();
-    return `<div class="hypo ${h.cls}">
+// ── Log ──────────────────────────────────────────────────
+function togglePill(el){
+  el.classList.toggle('on');
+  const v=el.dataset.val;
+  selectedTags.has(v)?selectedTags.delete(v):selectedTags.add(v);
+}
+function updateWxPreview(){
+  if(!wxOb.temp) return;
+  document.getElementById('wx-preview').textContent=
+    `OB: ${wxOb.temp}°F · ${wxOb.hum}% RH · AQI ${wxOb.aqi||'--'} | CIN: ${wxCin.temp||'--'}°F · AQI ${wxCin.aqi||'--'}`;
+}
+function loadLogs(){
+  try{const r=localStorage.getItem(STORAGE_KEY);logs=r?JSON.parse(r):[];}catch(e){logs=[];}
+}
+function saveLogs(){localStorage.setItem(STORAGE_KEY,JSON.stringify(logs));}
+function saveLog(){
+  logs.unshift({
+    ts:new Date().toISOString(),
+    note:document.getElementById('log-note').value.trim(),
+    tags:[...selectedTags],
+    rain:document.getElementById('log-rain').value,
+    vis:document.getElementById('log-vis').value,
+    weather:{...wxOb},wxCin:{...wxCin}
+  });
+  saveLogs();
+  document.getElementById('log-status').textContent='✓ Saved — '+new Date().toLocaleString();
+  document.getElementById('log-note').value='';
+  document.getElementById('log-rain').value='';
+  document.getElementById('log-vis').value='clear';
+  selectedTags.clear();
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('on'));
+}
+
+// ── Hypotheses ───────────────────────────────────────────
+function renderHypotheses(){
+  const total=logs.length;
+  const withD=logs.filter(l=>l.wxCin&&l.weather);
+  const avgDelta=withD.length?(withD.reduce((a,l)=>a+(l.weather.temp-l.wxCin.temp),0)/withD.length).toFixed(1):null;
+  const hypos=[
+    {title:'01 / Landfill methane microclimate',cls:'mb',
+     desc:'Republic Services landfill emits methane that may affect local heat retention, fog, and odor — especially when wind is S/SW.',
+     tag:'methane',alt:'wind-shift',
+     detail:()=>{const m=logs.filter(l=>l.tags.includes('methane'));const sw=m.filter(l=>['S','SW'].includes(l.weather?.wdir)).length;return m.length?`${sw}/${m.length} methane events had S/SW wind.`:''}},
+    {title:'02 / Canadian wildfire smoke transport',cls:'sb',
+     desc:'Smoke plumes create AQI events over Oberlin. Cincinnati AQI delta helps isolate whether it is regional or hyper-local.',
+     tag:'smoke',alt:null,
+     detail:()=>{const s=logs.filter(l=>l.tags.includes('smoke'));const h=s.filter(l=>l.weather?.aqi&&l.wxCin?.aqi&&l.weather.aqi>l.wxCin.aqi+15).length;return s.length?`${h}/${s.length} smoke events: Oberlin AQI was 15+ pts above Cincinnati.`:''}},
+    {title:'03 / Sub-radar convective downpours',cls:'rb',
+     desc:'Sudden heavy rain develops and collapses faster than NEXRAD refresh cycles. High heat + humidity may be precursors.',
+     tag:'radar-miss',alt:null,
+     detail:()=>{const r=logs.filter(l=>l.tags.includes('radar-miss'));const h=r.filter(l=>l.weather?.temp&&l.wxCin?.temp&&l.weather.temp>l.wxCin.temp+3).length;return r.length?`${h}/${r.length} radar-miss events: Oberlin was 3°F+ hotter than Cincinnati.`:''}}
+  ];
+  document.getElementById('hypo-list').innerHTML=hypos.map(h=>{
+    const count=logs.filter(l=>l.tags.includes(h.tag)||(h.alt&&l.tags.includes(h.alt))).length;
+    const pct=total>0?count/total:0;
+    const detail=h.detail();
+    return`<div class="hypo ${h.cls}">
       <div class="hypo-title">${h.title}</div>
       <div class="hypo-desc">${h.desc}</div>
-      <div class="hypo-bar"><div class="hypo-bar-fill" style="width:${Math.round(pct*100)}%"></div></div>
-      <div class="hypo-count">${count} / ${total} entries${detail?' · '+detail:''}</div>
+      <div class="hypo-bar"><div class="hypo-fill" style="width:${Math.round(pct*100)}%"></div></div>
+      <div class="hypo-count">${count}/${total} entries${detail?' · '+detail:''}</div>
     </div>`;
   }).join('');
-
-  const pt = document.getElementById('pattern-text');
-  if (total === 0) {
-    pt.textContent = 'No entries yet. Log daily observations to build pattern data.';
-  } else {
-    const mC = logs.filter(l=>l.tags.includes('methane')).length;
-    const sC = logs.filter(l=>l.tags.includes('smoke')).length;
-    const rC = logs.filter(l=>l.tags.includes('radar-miss')).length;
-    pt.innerHTML = `${total} entries logged. Methane: <strong>${mC}</strong>. Smoke: <strong>${sC}</strong>. Radar-miss: <strong>${rC}</strong>.`
-      + (avgTempDelta ? ` Average temp delta vs Cincinnati across all entries: <strong>${avgTempDelta>0?'+':''}${avgTempDelta}°F</strong>.` : '')
-      + ` Export CSV to run deeper analysis or share with a researcher.`;
-  }
+  const pt=document.getElementById('pattern-text');
+  if(!total){pt.textContent='No entries yet. Log daily observations to build pattern data.';return;}
+  const mC=logs.filter(l=>l.tags.includes('methane')).length;
+  const sC=logs.filter(l=>l.tags.includes('smoke')).length;
+  const rC=logs.filter(l=>l.tags.includes('radar-miss')).length;
+  pt.innerHTML=`${total} entries logged. Methane: <strong>${mC}</strong>. Smoke: <strong>${sC}</strong>. Radar-miss: <strong>${rC}</strong>.`
+    +(avgDelta?` Avg temp delta vs Cincinnati: <strong>${avgDelta>0?'+':''}${avgDelta}°F</strong>.`:'')
+    +` Export CSV from the Logbook tab to run deeper analysis.`;
 }
 
-// History
-function renderHistory() {
-  const el = document.getElementById('history-list');
-  const noEl = document.getElementById('no-entries');
-  document.getElementById('entry-count').textContent = logs.length + ' entries';
-  if (logs.length === 0) { el.innerHTML=''; noEl.classList.remove('hidden'); return; }
+// ── Logbook ──────────────────────────────────────────────
+function renderLogbook(){
+  const el=document.getElementById('history-list');
+  const noEl=document.getElementById('no-entries');
+  document.getElementById('entry-count').textContent=logs.length+' entries';
+  if(!logs.length){el.innerHTML='';noEl.classList.remove('hidden');return;}
   noEl.classList.add('hidden');
-  const tagCols = {methane:'methane',smoke:'smoke','radar-miss':'radar-miss'};
-  el.innerHTML = logs.map(e => {
-    const d = new Date(e.ts);
-    const ds = d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) + ' · ' +
-               d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    const ob = e.weather, cin = e.wxCin;
-    const wxStr = ob ? `OB: ${ob.temp}°F · ${ob.hum}% RH · ${ob.wind} mph ${ob.wdir||''} · AQI ${ob.aqi||'--'}` : '';
-    const deltaStr = (ob && cin && ob.temp && cin.temp) ?
-      `Δ vs CIN: temp ${ob.temp-cin.temp>0?'+':''}${ob.temp-cin.temp}°F · humidity ${ob.hum-cin.hum>0?'+':''}${ob.hum-cin.hum}% · AQI ${(ob.aqi||0)-(cin.aqi||0)>0?'+':''}${(ob.aqi||0)-(cin.aqi||0)}` : '';
-    return `<div class="log-entry">
+  const tc={methane:'methane',smoke:'smoke','radar-miss':'radar-miss'};
+  el.innerHTML=logs.map(e=>{
+    const d=new Date(e.ts);
+    const ds=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+' · '+
+             d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    const o=e.weather,c=e.wxCin;
+    const wxStr=o?`OB: ${o.temp}°F · ${o.hum}% RH · ${o.wind} mph ${o.wdir||''} · AQI ${o.aqi||'--'}`:'';
+    const dStr=(o&&c&&o.temp&&c.temp)?`Δ CIN: ${fmt(o.temp-c.temp)}°F temp · ${fmt(o.hum-c.hum)}% hum · ${fmt((o.aqi||0)-(c.aqi||0))} AQI`:'';
+    return`<div class="log-entry">
       <div class="log-ts">${ds}</div>
       ${e.note?`<div class="log-note">${e.note}</div>`:''}
-      ${e.tags.length?`<div class="log-tags">${e.tags.map(t=>`<span class="log-tag ${tagCols[t]||''}">${t}</span>`).join('')}</div>`:''}
+      ${e.tags.length?`<div class="log-tags">${e.tags.map(t=>`<span class="log-tag ${tc[t]||''}">${t}</span>`).join('')}</div>`:''}
       ${wxStr?`<div class="log-wx">${wxStr}</div>`:''}
-      ${deltaStr?`<div class="log-delta" style="color:var(--text3)">${deltaStr}</div>`:''}
+      ${dStr?`<div class="log-wx">${dStr}</div>`:''}
     </div>`;
   }).join('');
 }
 
-// Export
-function exportCSV() {
-  if (logs.length === 0) { alert('No entries to export.'); return; }
-  const headers = ['Date','Note','Tags','Rain','Visibility',
-    'OB_Temp','OB_Humidity','OB_Wind','OB_WindDir','OB_Pressure','OB_AQI','OB_PM25',
-    'CIN_Temp','CIN_Humidity','CIN_Wind','CIN_WindDir','CIN_AQI',
-    'Delta_Temp','Delta_Humidity','Delta_AQI'];
-  const rows = logs.map(e => {
-    const o = e.weather||{}, c = e.wxCin||{};
-    return [
-      new Date(e.ts).toLocaleString(),
-      (e.note||'').replace(/,/g,'|'),
-      e.tags.join('|'), e.rain||'', e.vis||'',
+// ── Export ───────────────────────────────────────────────
+function exportCSV(){
+  if(!logs.length){alert('No entries to export.');return;}
+  const h=['Date','Note','Tags','Rain','Visibility',
+    'OB_Temp','OB_Hum','OB_Wind','OB_WindDir','OB_Pressure','OB_AQI','OB_PM25',
+    'CIN_Temp','CIN_Hum','CIN_Wind','CIN_WindDir','CIN_AQI',
+    'Delta_Temp','Delta_Hum','Delta_AQI'];
+  const rows=logs.map(e=>{
+    const o=e.weather||{},c=e.wxCin||{};
+    return[new Date(e.ts).toLocaleString(),(e.note||'').replace(/,/g,'|'),
+      e.tags.join('|'),e.rain||'',e.vis||'',
       o.temp||'',o.hum||'',o.wind||'',o.wdir||'',o.pres||'',o.aqi||'',o.pm25||'',
       c.temp||'',c.hum||'',c.wind||'',c.wdir||'',c.aqi||'',
-      (o.temp&&c.temp)?o.temp-c.temp:'',
-      (o.hum&&c.hum)?o.hum-c.hum:'',
-      (o.aqi!=null&&c.aqi!=null)?(o.aqi-c.aqi):''
-    ].join(',');
+      (o.temp&&c.temp)?o.temp-c.temp:'',(o.hum&&c.hum)?o.hum-c.hum:'',
+      (o.aqi!=null&&c.aqi!=null)?(o.aqi-c.aqi):''].join(',');
   });
-  const csv = [headers.join(','), ...rows].join('\n');
-  const a = Object.assign(document.createElement('a'),{
-    href: URL.createObjectURL(new Blob([csv],{type:'text/csv'})),
-    download: 'oberlin-wx-'+new Date().toISOString().slice(0,10)+'.csv'
+  const a=Object.assign(document.createElement('a'),{
+    href:URL.createObjectURL(new Blob([[h.join(','),...rows].join('\n')],{type:'text/csv'})),
+    download:'oberlinweather-'+new Date().toISOString().slice(0,10)+'.csv'
   });
   a.click();
 }
-
-function clearLogs() {
-  if (confirm('Clear all log entries? This cannot be undone.')) {
-    logs = []; saveLogs(); renderHistory();
-  }
+function clearLogs(){
+  if(confirm('Clear all log entries? This cannot be undone.')){logs=[];saveLogs();renderLogbook();}
 }
 
+// ── Init ─────────────────────────────────────────────────
 loadLogs();
 loadAll();
 </script>
