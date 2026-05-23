@@ -528,75 +528,92 @@ async function loadHistorical(){
   if(histLoaded) return;
   const loading=document.getElementById('hist-loading');
   const content=document.getElementById('hist-content');
+
+  async function fetchWithTimeout(url, ms=8000){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),ms);
+    try{
+      const r=await fetch(url,{signal:controller.signal});
+      clearTimeout(timer);
+      return r.json();
+    }catch(e){ clearTimeout(timer); return null; }
+  }
+
   try{
     const today=new Date();
     const todayStr=today.toISOString().slice(0,10);
-    // Dates for last year same day
+
+    // Last year same date
     const lastYear=new Date(today); lastYear.setFullYear(today.getFullYear()-1);
     const ly=lastYear.toISOString().slice(0,10);
-    // 5 year range
-    const fiveYearsAgo=new Date(today); fiveYearsAgo.setFullYear(today.getFullYear()-5);
-    const fy=fiveYearsAgo.toISOString().slice(0,10);
-    // All time records — use full archive
-    const allTimeStart='1940-01-01';
 
-    // Current conditions already in wxOb
-    // Last year same date
-    const lyUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${ly}&end_date=${ly}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FNew_York`;
-    // 5-year average: fetch this date range ±2 days each year for 5 years and average
-    const avgUrls=[];
-    for(let y=1;y<=5;y++){
-      const d1=new Date(today); d1.setFullYear(today.getFullYear()-y);
-      avgUrls.push(`https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${d1.toISOString().slice(0,10)}&end_date=${d1.toISOString().slice(0,10)}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FNew_York`);
-    }
-    // All time records for this month
-    const thisMonth=todayStr.slice(0,7);
-    const recUrl=`https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=1980-01-01&end_date=${todayStr}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York`;
-    // This week forecast for chart
-    const weekUrl=`https://api.open-meteo.com/v1/forecast?latitude=${OB.lat}&longitude=${OB.lon}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=7`;
+    // 5-year average — fetch one date range instead of 5 individual calls
+    const fiveAgo=new Date(today); fiveAgo.setFullYear(today.getFullYear()-5);
+    const fyStr=fiveAgo.toISOString().slice(0,10);
 
-    const [lyData, ...avgDataArr]=await Promise.all([
-      fetch(lyUrl).then(r=>r.json()),
-      ...avgUrls.map(u=>fetch(u).then(r=>r.json()))
-    ]);
+    // Records — only go back 20 years instead of 45 to reduce payload
+    const recStart=new Date(today); recStart.setFullYear(today.getFullYear()-20);
+    const recStr=recStart.toISOString().slice(0,10);
+
+    // Fire sequentially not in parallel to avoid overwhelming the API
+    loading.textContent='Loading last year data...';
+    const lyData=await fetchWithTimeout(
+      `https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${ly}&end_date=${ly}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FNew_York`
+    );
+
+    loading.textContent='Loading 5-year average...';
+    const avgData=await fetchWithTimeout(
+      `https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${fyStr}&end_date=${todayStr}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York`
+    );
+
+    loading.textContent='Loading records...';
+    const recData=await fetchWithTimeout(
+      `https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${recStr}&end_date=${todayStr}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York`
+    );
 
     // Last year values
-    const lyHigh=Math.round(lyData.daily.temperature_2m_max[0]);
-    const lyLow=Math.round(lyData.daily.temperature_2m_min[0]);
-    const lyPrecip=lyData.daily.precipitation_sum[0]?.toFixed(2)||'0.00';
+    const lyHigh=lyData?Math.round(lyData.daily.temperature_2m_max[0]):null;
+    const lyLow=lyData?Math.round(lyData.daily.temperature_2m_min[0]):null;
+    const lyPrecip=lyData?lyData.daily.precipitation_sum[0]?.toFixed(2):'--';
 
-    // 5-year average
-    const avgHighs=avgDataArr.map(d=>d.daily.temperature_2m_max[0]).filter(Boolean);
-    const avgLows=avgDataArr.map(d=>d.daily.temperature_2m_min[0]).filter(Boolean);
+    // 5-year average — filter to this calendar date ±3 days across all years
+    let avgHighs=[], avgLows=[];
+    if(avgData){
+      const tod=today.getMonth()*100+today.getDate();
+      avgData.daily.time.forEach((t,i)=>{
+        const d=new Date(t+'T12:00:00');
+        const dmd=d.getMonth()*100+d.getDate();
+        if(Math.abs(dmd-tod)<=3){
+          if(avgData.daily.temperature_2m_max[i]) avgHighs.push(avgData.daily.temperature_2m_max[i]);
+          if(avgData.daily.temperature_2m_min[i]) avgLows.push(avgData.daily.temperature_2m_min[i]);
+        }
+      });
+    }
     const avgHigh=avgHighs.length?Math.round(avgHighs.reduce((a,b)=>a+b,0)/avgHighs.length):null;
     const avgLow=avgLows.length?Math.round(avgLows.reduce((a,b)=>a+b,0)/avgLows.length):null;
 
-    // Records — fetch last 45 years, find max/min for this calendar month/day ±7 days
-    const recData=await fetch(recUrl).then(r=>r.json());
-    const tod_mmdd=todayStr.slice(5);
-    let recHigh=-999, recHighYear='', recLow=999, recLowYear='';
-    recData.daily.time.forEach((t,i)=>{
-      const mmdd=t.slice(5);
-      // Within 7 days of today's calendar date
-      const tDate=new Date(t+'T12:00:00');
-      const todDate=new Date(todayStr+'T12:00:00');
-      todDate.setFullYear(tDate.getFullYear());
-      const diff=Math.abs(tDate-todDate)/(1000*60*60*24);
-      if(diff<=3){
-        const h=recData.daily.temperature_2m_max[i];
-        const l=recData.daily.temperature_2m_min[i];
-        if(h&&h>recHigh){recHigh=Math.round(h);recHighYear=t.slice(0,4);}
-        if(l&&l<recLow){recLow=Math.round(l);recLowYear=t.slice(0,4);}
-      }
-    });
+    // Records
+    let recHigh=-999,recHighYear='',recLow=999,recLowYear='';
+    if(recData){
+      const tod=today.getMonth()*100+today.getDate();
+      recData.daily.time.forEach((t,i)=>{
+        const d=new Date(t+'T12:00:00');
+        const dmd=d.getMonth()*100+d.getDate();
+        if(Math.abs(dmd-tod)<=3){
+          const h=recData.daily.temperature_2m_max[i];
+          const l=recData.daily.temperature_2m_min[i];
+          if(h&&h>recHigh){recHigh=Math.round(h);recHighYear=t.slice(0,4);}
+          if(l&&l<recLow){recLow=Math.round(l);recLowYear=t.slice(0,4);}
+        }
+      });
+    }
 
     const todayHigh=wxOb.daily?Math.round(wxOb.daily.temperature_2m_max[0]):null;
     const todayLow=wxOb.daily?Math.round(wxOb.daily.temperature_2m_min[0]):null;
     const tempAnomaly=avgHigh&&todayHigh?todayHigh-avgHigh:null;
 
     // Render columns
-    const cols=document.getElementById('hist-cols');
-    cols.innerHTML=`
+    document.getElementById('hist-cols').innerHTML=`
       <div class="hist-col">
         <div class="hist-col-title">📅 Today's forecast</div>
         <div class="hist-row"><span class="hist-label">High</span><span class="hist-val${todayHigh&&avgHigh&&todayHigh>avgHigh+3?' hot':''}">${todayHigh||'--'}°F</span></div>
@@ -607,20 +624,18 @@ async function loadHistorical(){
       </div>
       <div class="hist-col">
         <div class="hist-col-title">📆 This date last year</div>
-        <div class="hist-row"><span class="hist-label">High</span><span class="hist-val">${lyHigh}°F</span></div>
-        <div class="hist-row"><span class="hist-label">Low</span><span class="hist-val">${lyLow}°F</span></div>
+        <div class="hist-row"><span class="hist-label">High</span><span class="hist-val">${lyHigh||'--'}°F</span></div>
+        <div class="hist-row"><span class="hist-label">Low</span><span class="hist-val">${lyLow||'--'}°F</span></div>
         <div class="hist-row"><span class="hist-label">Precip</span><span class="hist-val">${lyPrecip}"</span></div>
         <div class="hist-row"><span class="hist-label">vs Today</span><span class="hist-val ${todayHigh&&lyHigh&&todayHigh-lyHigh>3?'hot':todayHigh&&lyHigh&&todayHigh-lyHigh<-3?'cold':''}">${todayHigh&&lyHigh?fmt(todayHigh-lyHigh)+'°':'--'}</span></div>
       </div>
       <div class="hist-col">
-        <div class="hist-col-title">📊 5-year average</div>
+        <div class="hist-col-title">📊 5-yr avg + records</div>
         <div class="hist-row"><span class="hist-label">Avg high</span><span class="hist-val">${avgHigh||'--'}°F</span></div>
         <div class="hist-row"><span class="hist-label">Avg low</span><span class="hist-val">${avgLow||'--'}°F</span></div>
         <div class="hist-row"><span class="hist-label">Anomaly</span><span class="hist-val ${tempAnomaly>3?'hot':tempAnomaly<-3?'cold':''}">${tempAnomaly!=null?fmt(tempAnomaly)+'°':'--'}</span></div>
-        <div class="hist-row"><span class="hist-label">Record high</span>
-          <span class="hist-val hot">${recHigh>-999?recHigh+'°F':'--'}<span class="record-badge record-high">${recHighYear}</span></span></div>
-        <div class="hist-row"><span class="hist-label">Record low</span>
-          <span class="hist-val cold">${recLow<999?recLow+'°F':'--'}<span class="record-badge record-low">${recLowYear}</span></span></div>
+        <div class="hist-row"><span class="hist-label">Record high</span><span class="hist-val hot">${recHigh>-999?recHigh+'°F':'--'}<span class="record-badge record-high">${recHighYear}</span></span></div>
+        <div class="hist-row"><span class="hist-label">Record low</span><span class="hist-val cold">${recLow<999?recLow+'°F':'--'}<span class="record-badge record-low">${recLowYear}</span></span></div>
       </div>`;
 
     // Anomaly bar
@@ -636,9 +651,9 @@ async function loadHistorical(){
         <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:4px;">
           ${tempAnomaly>0?'+':''}${tempAnomaly}°F vs 5-year avg · ${recHigh>-999?'Record high '+recHigh+'°F ('+recHighYear+')':''}
         </div>`;
-    } else { anomEl.textContent='Insufficient data.'; }
+    } else { anomEl.textContent='Insufficient data for anomaly calculation.'; }
 
-    // Week highs mini chart
+    // Week highs
     if(wxOb.daily){
       const wrow=document.getElementById('hist-week-row'); wrow.innerHTML='';
       const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
