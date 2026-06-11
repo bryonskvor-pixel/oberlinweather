@@ -7,39 +7,31 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-:root {
+:root{
   --bg:#0d0f12;--bg2:#141720;--bg3:#1c2030;
   --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
   --text:#e8eaf0;--text2:#8b90a0;--text3:#555c70;
   --accent:#4af0c4;--accent2:#2db89a;
-  --warn:#f0a94a;--danger:#f05a5a;--blue:#4a9af0;--cin:#c084fc;
+  --warn:#f0a94a;--danger:#f05a5a;--blue:#4a9af0;
+  --cin:#c084fc;--phx:#fb923c;
   --radius:10px;--radius-sm:6px;
   --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;}
-body::before{
-  content:'';
-  position:fixed;
-  inset:0;
-  background:url('./hero.png') center center / cover no-repeat;
-  opacity:0.12;
-  z-index:0;
-  pointer-events:none;
-}
-.app{position:relative;z-index:1;}
-.app{max-width:960px;margin:0 auto;padding:24px 20px;}
+body::before{content:'';position:fixed;inset:0;background:url('./hero.png') center center / cover no-repeat;opacity:0.07;z-index:0;pointer-events:none;}
+.app{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:24px 20px;}
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;}
 .header h1{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--accent);letter-spacing:.02em;}
 .header .sub{font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;}
 .header-right{font-family:var(--mono);font-size:11px;color:var(--text3);text-align:right;line-height:1.8;}
 .tabs{display:flex;gap:2px;margin-bottom:20px;background:var(--bg2);border-radius:var(--radius);padding:4px;border:1px solid var(--border);flex-wrap:wrap;}
-.tab{flex:1;min-width:70px;padding:8px 8px;background:transparent;border:none;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;border-radius:var(--radius-sm);transition:all .15s;text-transform:uppercase;letter-spacing:.04em;}
+.tab{flex:1;min-width:60px;padding:8px 6px;background:transparent;border:none;color:var(--text2);font-family:var(--mono);font-size:10px;cursor:pointer;border-radius:var(--radius-sm);transition:all .15s;text-transform:uppercase;letter-spacing:.04em;}
 .tab:hover{color:var(--text);}
 .tab.active{background:var(--bg3);color:var(--accent);}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px;}
 .card-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:14px;}
-.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px;}
 .metric{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:13px;}
 .metric-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:5px;}
 .metric-val{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--text);}
@@ -58,6 +50,7 @@ body::before{
 .f-high{font-family:var(--mono);font-size:17px;color:var(--text);}
 .f-low{font-family:var(--mono);font-size:12px;color:var(--text3);}
 .f-rain{font-size:11px;color:var(--blue);margin-top:3px;}
+/* Radar */
 #radar-map{width:100%;height:400px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);}
 .radar-controls{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;}
 .radar-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text2);font-family:var(--mono);font-size:11px;padding:7px 14px;border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;}
@@ -66,6 +59,10 @@ body::before{
 .radar-play:hover{background:var(--accent);}
 .frame-slider{flex:1;min-width:120px;accent-color:var(--accent2);}
 .radar-ts-label{font-family:var(--mono);font-size:11px;color:var(--text3);min-width:160px;}
+/* Lightning legend */
+.lightning-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text3);}
+.legend-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle;}
+/* History */
 .hist-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
 .hist-col{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;}
 .hist-col-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:12px;}
@@ -80,22 +77,47 @@ body::before{
 .record-low{background:rgba(74,154,240,.15);color:var(--blue);border:1px solid rgba(74,154,240,.3);}
 .anomaly-bar{height:3px;border-radius:2px;background:var(--bg2);margin-top:6px;overflow:hidden;}
 .anomaly-fill{height:100%;border-radius:2px;transition:width .6s;}
-.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+/* Compare — 3 cities */
+.compare-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
 .city-header{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
 .city-header.ob{color:var(--accent);}
 .city-header.cin{color:var(--cin);}
-.cmp-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);}
+.city-header.phx{color:var(--phx);}
+.cmp-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);}
 .cmp-row:last-child{border-bottom:none;}
-.cmp-label{font-size:12px;color:var(--text3);}
-.cmp-val{font-family:var(--mono);font-size:13px;color:var(--text);}
-.delta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;}
-.delta-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:13px;text-align:center;}
-.delta-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:6px;}
-.delta-val{font-family:var(--mono);font-size:22px;font-weight:500;}
+.cmp-label{font-size:11px;color:var(--text3);}
+.cmp-val{font-family:var(--mono);font-size:12px;color:var(--text);}
+.delta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:14px;}
+.delta-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:11px;text-align:center;}
+.delta-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:5px;}
+.delta-val{font-family:var(--mono);font-size:18px;font-weight:500;}
 .dpos{color:var(--danger);}
 .dneg{color:var(--blue);}
 .dzero{color:var(--text3);}
-.delta-sub{font-size:11px;color:var(--text3);margin-top:3px;}
+.delta-sub{font-size:10px;color:var(--text3);margin-top:2px;}
+/* NOAA storms */
+.storm-entry{padding:12px 0;border-bottom:1px solid var(--border);}
+.storm-entry:last-child{border-bottom:none;}
+.storm-header{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;flex-wrap:wrap;}
+.storm-type{font-family:var(--mono);font-size:12px;font-weight:500;}
+.storm-type.tornado{color:var(--danger);}
+.storm-type.tstm{color:var(--warn);}
+.storm-type.hail{color:var(--blue);}
+.storm-type.wind{color:var(--accent);}
+.storm-type.flood{color:#60a5fa;}
+.storm-type.other{color:var(--text2);}
+.storm-time{font-family:var(--mono);font-size:10px;color:var(--text3);}
+.storm-location{font-size:12px;color:var(--text2);}
+.storm-desc{font-size:12px;color:var(--text3);margin-top:3px;line-height:1.5;}
+.storm-mag{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);}
+/* Purple Air placeholder */
+.pa-placeholder{background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);padding:20px;text-align:center;}
+.pa-placeholder h3{font-family:var(--mono);font-size:13px;color:var(--text2);margin-bottom:8px;}
+.pa-placeholder p{font-size:12px;color:var(--text3);line-height:1.6;}
+.pa-key-input{display:flex;gap:8px;margin-top:14px;}
+.pa-key-input input{flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:12px;padding:8px 12px;outline:none;}
+.pa-key-input input:focus{border-color:var(--accent2);}
+/* Log */
 .form-group{margin-bottom:14px;}
 .form-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px;display:block;}
 textarea,select{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:var(--sans);font-size:14px;padding:10px 12px;outline:none;transition:border-color .15s;}
@@ -111,7 +133,9 @@ select option{background:var(--bg2);}
 .btn:hover{background:var(--accent);}
 .btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text2);}
 .btn-ghost:hover{border-color:var(--accent2);color:var(--text);background:transparent;}
+.btn-sm{padding:6px 14px;font-size:11px;}
 .status{font-family:var(--mono);font-size:11px;color:var(--accent2);margin-top:8px;min-height:18px;}
+/* Logbook */
 .log-entry{border-bottom:1px solid var(--border);padding:14px 0;}
 .log-entry:last-child{border-bottom:none;}
 .log-ts{font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;}
@@ -122,6 +146,7 @@ select option{background:var(--bg2);}
 .log-tag.smoke{color:var(--blue);border-color:rgba(74,154,240,.3);}
 .log-tag.radar-miss{color:var(--danger);border-color:rgba(240,90,90,.3);}
 .log-wx{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px;}
+/* Hypotheses */
 .hypo{border-left:2px solid var(--accent2);padding:12px 16px;background:var(--bg3);border-radius:0 var(--radius-sm) var(--radius-sm) 0;margin-bottom:10px;}
 .hypo-title{font-family:var(--mono);font-size:13px;color:var(--text);margin-bottom:4px;}
 .hypo-desc{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:8px;}
@@ -131,6 +156,10 @@ select option{background:var(--bg2);}
 .mb{border-left-color:var(--warn);}
 .sb{border-left-color:var(--blue);}
 .rb{border-left-color:var(--danger);}
+/* Loading */
+.hist-loading{font-family:var(--mono);font-size:12px;color:var(--text3);padding:20px 0;display:flex;align-items:center;gap:10px;}
+.hist-loading::before{content:'';width:10px;height:10px;border-radius:50%;background:var(--accent2);animation:pulse 1.2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 ::-webkit-scrollbar{width:4px;height:4px;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 .hidden{display:none;}
@@ -138,10 +167,7 @@ select option{background:var(--bg2);}
 .export-row{display:flex;gap:8px;margin-top:14px;}
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
 .count-badge{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--bg3);padding:3px 10px;border-radius:20px;border:1px solid var(--border);}
-.hist-loading{font-family:var(--mono);font-size:12px;color:var(--text3);padding:20px 0;display:flex;align-items:center;gap:10px;}
-.hist-loading::before{content:'';width:10px;height:10px;border-radius:50%;background:var(--accent2);animation:pulse 1.2s infinite;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
-@media(max-width:600px){.hist-grid{grid-template-columns:1fr;}.compare-grid{grid-template-columns:1fr;}}
+@media(max-width:640px){.hist-grid{grid-template-columns:1fr;}.compare-grid{grid-template-columns:1fr;}.delta-grid{grid-template-columns:repeat(2,1fr);}}
 </style>
 </head>
 <body>
@@ -162,6 +188,8 @@ select option{background:var(--bg2);}
     <button class="tab" onclick="switchTab('radar')">Radar</button>
     <button class="tab" onclick="switchTab('history-wx')">History</button>
     <button class="tab" onclick="switchTab('compare')">Compare</button>
+    <button class="tab" onclick="switchTab('storms')">Storms</button>
+    <button class="tab" onclick="switchTab('airquality')">Air</button>
     <button class="tab" onclick="switchTab('log')">Log</button>
     <button class="tab" onclick="switchTab('hypotheses')">Hypotheses</button>
     <button class="tab" onclick="switchTab('logbook')">Logbook</button>
@@ -175,6 +203,7 @@ select option{background:var(--bg2);}
       <div class="metric"><div class="metric-label">Wind</div><div class="metric-val" id="m-wind">--</div><div class="metric-sub" id="m-wdir">--</div></div>
       <div class="metric"><div class="metric-label">Precip today</div><div class="metric-val" id="m-precip">--</div><div class="metric-sub">daily total</div></div>
       <div class="metric"><div class="metric-label">Pressure</div><div class="metric-val" id="m-pres">--</div><div class="metric-sub">hPa</div></div>
+      <div class="metric"><div class="metric-label">UV Index</div><div class="metric-val" id="m-uv">--</div><div class="metric-sub" id="m-uv-label">--</div></div>
     </div>
     <div class="card">
       <div class="card-title">Air quality <span id="aqi-cat" style="margin-left:6px;color:var(--text2);"></span></div>
@@ -199,25 +228,33 @@ select option{background:var(--bg2);}
   <!-- RADAR -->
   <div id="tab-radar" class="hidden">
     <div class="card" style="padding:12px;">
-      <div class="card-title" style="margin-bottom:8px;">Live animated radar — Oberlin & Cincinnati</div>
+      <div class="card-title" style="margin-bottom:8px;">Live animated radar + lightning strikes</div>
       <div id="radar-map"></div>
       <div class="radar-controls">
         <button class="radar-play" id="play-btn" onclick="togglePlay()">▶ Play</button>
         <input type="range" class="frame-slider" id="frame-slider" min="0" max="7" value="7" oninput="scrubFrame(this.value)">
         <div class="radar-ts-label" id="radar-ts">Loading frames...</div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:8px;">
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
         <button class="radar-btn active" id="btn-normal" onclick="setOpacity(0.75)">Normal</button>
         <button class="radar-btn" id="btn-bright" onclick="setOpacity(1)">Bright</button>
         <button class="radar-btn" id="btn-dim" onclick="setOpacity(0.4)">Dim</button>
+        <button class="radar-btn" id="btn-lightning" onclick="toggleLightning()">⚡ Lightning</button>
+      </div>
+      <div class="lightning-legend" id="lightning-legend" style="display:none;">
+        <span><span class="legend-dot" style="background:#fff700;"></span>0–10 min</span>
+        <span><span class="legend-dot" style="background:#ffa500;"></span>10–20 min</span>
+        <span><span class="legend-dot" style="background:#ff4444;"></span>20–30 min</span>
+        <span><span class="legend-dot" style="background:#884444;"></span>30–60 min</span>
+        <span id="lightning-count" style="margin-left:auto;"></span>
       </div>
       <div style="margin-top:10px;font-size:12px;color:var(--text3);font-family:var(--mono);">
-        ⚡ Watch for cells appearing and vanishing in 1–2 frames — those are your radar-invisible events. Log immediately.
+        ⚡ Watch for cells appearing and vanishing in 1–2 frames — those are your radar-invisible events. Lightning layer shows recent strikes.
       </div>
     </div>
   </div>
 
-  <!-- HISTORICAL WEATHER -->
+  <!-- HISTORY -->
   <div id="tab-history-wx" class="hidden">
     <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:14px;line-height:1.7;">
       Today vs this date last year, 5-year average, and records for Oberlin.
@@ -225,29 +262,25 @@ select option{background:var(--bg2);}
     <div id="hist-loading" class="hist-loading hidden">Loading historical data — this takes 15–20 seconds...</div>
     <div id="hist-content" class="hidden">
       <div class="hist-grid" id="hist-cols"></div>
-      <div class="card">
-        <div class="card-title">Anomaly vs 5-year average</div>
-        <div id="anomaly-section"></div>
-      </div>
-      <div class="card" style="margin-top:4px;">
-        <div class="card-title">This week — Oberlin high temps</div>
-        <div class="forecast-row" id="hist-week-row"></div>
-      </div>
+      <div class="card"><div class="card-title">Anomaly vs 5-year average</div><div id="anomaly-section"></div></div>
+      <div class="card" style="margin-top:4px;"><div class="card-title">This week — Oberlin high temps</div><div class="forecast-row" id="hist-week-row"></div></div>
     </div>
     <div id="hist-error" class="hidden" style="font-family:var(--mono);font-size:12px;color:var(--danger);padding:10px 0;"></div>
-    <button id="hist-load-btn" class="btn" onclick="loadHistorical(true)" style="margin-top:8px;">Load historical data</button>
+    <button id="hist-load-btn" class="btn" onclick="loadHistorical(true)">Load historical data</button>
   </div>
 
-  <!-- COMPARE -->
+  <!-- COMPARE — 3 cities -->
   <div id="tab-compare" class="hidden">
     <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:14px;">
-      Live: <span style="color:var(--accent)">Oberlin</span> vs <span style="color:var(--cin)">Cincinnati</span>
+      Live: <span style="color:var(--accent)">Oberlin</span> vs <span style="color:var(--cin)">Cincinnati</span> vs <span style="color:var(--phx)">Phoenix</span>
     </div>
     <div class="delta-grid">
-      <div class="delta-card"><div class="delta-label">Temp delta</div><div class="delta-val dzero" id="d-temp">--</div><div class="delta-sub">Oberlin vs Cin</div></div>
-      <div class="delta-card"><div class="delta-label">Humidity</div><div class="delta-val dzero" id="d-hum">--</div><div class="delta-sub">percentage pts</div></div>
-      <div class="delta-card"><div class="delta-label">AQI delta</div><div class="delta-val dzero" id="d-aqi">--</div><div class="delta-sub">air quality</div></div>
-      <div class="delta-card"><div class="delta-label">Wind delta</div><div class="delta-val dzero" id="d-wind">--</div><div class="delta-sub">mph</div></div>
+      <div class="delta-card"><div class="delta-label">OB vs CIN temp</div><div class="delta-val dzero" id="d-temp-cin">--</div><div class="delta-sub">°F delta</div></div>
+      <div class="delta-card"><div class="delta-label">OB vs PHX temp</div><div class="delta-val dzero" id="d-temp-phx">--</div><div class="delta-sub">°F delta</div></div>
+      <div class="delta-card"><div class="delta-label">OB vs CIN AQI</div><div class="delta-val dzero" id="d-aqi-cin">--</div><div class="delta-sub">AQI delta</div></div>
+      <div class="delta-card"><div class="delta-label">OB vs PHX AQI</div><div class="delta-val dzero" id="d-aqi-phx">--</div><div class="delta-sub">AQI delta</div></div>
+      <div class="delta-card"><div class="delta-label">OB vs CIN hum</div><div class="delta-val dzero" id="d-hum-cin">--</div><div class="delta-sub">% delta</div></div>
+      <div class="delta-card"><div class="delta-label">OB vs PHX hum</div><div class="delta-val dzero" id="d-hum-phx">--</div><div class="delta-sub">% delta</div></div>
     </div>
     <div class="compare-grid">
       <div class="card">
@@ -258,11 +291,71 @@ select option{background:var(--bg2);}
         <div class="city-header cin">📍 Cincinnati, OH</div>
         <div id="cin-rows"></div>
       </div>
+      <div class="card">
+        <div class="city-header phx">📍 Phoenix, AZ</div>
+        <div id="phx-rows"></div>
+      </div>
     </div>
     <div class="card">
-      <div class="card-title">Logged divergence history</div>
+      <div class="card-title">Logged divergence history — OB vs CIN</div>
       <div id="div-history"></div>
       <div class="empty-state hidden" id="no-div">Log entries to build divergence history.</div>
+    </div>
+  </div>
+
+  <!-- STORMS -->
+  <div id="tab-storms" class="hidden">
+    <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:14px;line-height:1.7;">
+      Recent severe weather reports from NWS Cleveland — Lorain County and surrounding area.
+    </div>
+    <div id="storms-loading" class="hist-loading hidden">Loading storm reports...</div>
+    <div id="storms-content" class="hidden">
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-title" id="storms-header">Recent reports</div>
+        <div id="storms-list"></div>
+      </div>
+    </div>
+    <div id="storms-error" class="hidden" style="font-family:var(--mono);font-size:12px;color:var(--danger);padding:10px 0;"></div>
+    <button id="storms-load-btn" class="btn" onclick="loadStorms(true)">Load storm reports</button>
+    <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:10px;">
+      Data from NOAA Storm Prediction Center · NWS Cleveland (CLE) zone
+    </div>
+  </div>
+
+  <!-- AIR QUALITY -->
+  <div id="tab-airquality" class="hidden">
+    <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:14px;line-height:1.7;">
+      Current air quality data for Oberlin.
+    </div>
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title">Open-Meteo AQI — model based</div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">
+        <span id="aq-aqi-num" style="font-family:var(--mono);font-size:32px;">--</span>
+        <span id="aq-aqi-cat" style="font-size:13px;color:var(--text2);"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">
+        <div class="metric"><div class="metric-label">PM2.5</div><div class="metric-val" id="aq-pm25" style="font-size:18px;">--</div><div class="metric-sub">μg/m³</div></div>
+        <div class="metric"><div class="metric-label">PM10</div><div class="metric-val" id="aq-pm10" style="font-size:18px;">--</div><div class="metric-sub">μg/m³</div></div>
+        <div class="metric"><div class="metric-label">Ozone</div><div class="metric-val" id="aq-o3" style="font-size:18px;">--</div><div class="metric-sub">μg/m³</div></div>
+        <div class="metric"><div class="metric-label">NO₂</div><div class="metric-val" id="aq-no2" style="font-size:18px;">--</div><div class="metric-sub">μg/m³</div></div>
+      </div>
+    </div>
+    <!-- Purple Air placeholder -->
+    <div class="pa-placeholder">
+      <h3>🟣 Purple Air — Hyperlocal sensor data</h3>
+      <p>Purple Air uses community-owned sensors for street-level AQI readings — more granular than model-based data. Check <strong>map.purpleair.com</strong> to see if sensors exist near Oberlin (44074) before getting a key.</p>
+      <p style="margin-top:8px;">To activate: email <strong>contact@purpleair.com</strong> for a free research API key, then enter it below.</p>
+      <div class="pa-key-input">
+        <input type="text" id="pa-key-input" placeholder="Paste Purple Air API key here...">
+        <button class="btn btn-sm" onclick="savePurpleAirKey()">Activate</button>
+      </div>
+      <div id="pa-status" style="font-family:var(--mono);font-size:11px;color:var(--accent2);margin-top:8px;"></div>
+    </div>
+    <div id="pa-data" class="hidden" style="margin-top:14px;">
+      <div class="card">
+        <div class="card-title">Purple Air — nearest sensors</div>
+        <div id="pa-sensors"></div>
+      </div>
     </div>
   </div>
 
@@ -272,7 +365,7 @@ select option{background:var(--bg2);}
       <div class="card-title">Today's observation</div>
       <div class="form-group">
         <label class="form-label">Quick note</label>
-        <textarea id="log-note" placeholder="What did you notice? Landfill odor, smoke haze, sudden downpour with no radar warning, temperature anomaly..."></textarea>
+        <textarea id="log-note" placeholder="What did you notice? Landfill odor, smoke haze, sudden downpour, microburst, lightning storm, temperature anomaly..."></textarea>
       </div>
       <div class="form-group">
         <label class="form-label">Tag the phenomena</label>
@@ -280,6 +373,8 @@ select option{background:var(--bg2);}
           <div class="pill" onclick="togglePill(this)" data-val="methane">🏭 Methane / landfill odor</div>
           <div class="pill" onclick="togglePill(this)" data-val="smoke">🌫 Wildfire smoke</div>
           <div class="pill" onclick="togglePill(this)" data-val="radar-miss">⛈ Radar-invisible rain</div>
+          <div class="pill" onclick="togglePill(this)" data-val="microburst">🌪 Microburst / severe wind</div>
+          <div class="pill" onclick="togglePill(this)" data-val="lightning">⚡ Intense lightning</div>
           <div class="pill" onclick="togglePill(this)" data-val="heat-anomaly">🌡 Heat anomaly</div>
           <div class="pill" onclick="togglePill(this)" data-val="wind-shift">💨 Wind shift</div>
           <div class="pill" onclick="togglePill(this)" data-val="normal">✓ Nothing unusual</div>
@@ -314,14 +409,9 @@ select option{background:var(--bg2);}
 
   <!-- HYPOTHESES -->
   <div id="tab-hypotheses" class="hidden">
-    <div style="font-size:12px;color:var(--text3);margin-bottom:16px;font-family:var(--mono);line-height:1.6;">
-      Three working hypotheses. Pattern data builds as you log.
-    </div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px;font-family:var(--mono);line-height:1.6;">Three working hypotheses. Pattern data builds as you log.</div>
     <div id="hypo-list"></div>
-    <div class="card">
-      <div class="card-title">Pattern summary</div>
-      <div id="pattern-text" style="font-size:13px;color:var(--text2);line-height:1.7;"></div>
-    </div>
+    <div class="card"><div class="card-title">Pattern summary</div><div id="pattern-text" style="font-size:13px;color:var(--text2);line-height:1.7;"></div></div>
   </div>
 
   <!-- LOGBOOK -->
@@ -341,13 +431,18 @@ select option{background:var(--bg2);}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+// ── Config ───────────────────────────────────────────────
 const OB  = {lat:41.2931, lon:-82.2174, name:'Oberlin'};
 const CIN = {lat:39.1031, lon:-84.5120, name:'Cincinnati'};
-const STORAGE_KEY = 'oberlin_wx_v3';
+const PHX = {lat:33.4484, lon:-112.0740, name:'Phoenix'};
+const STORAGE_KEY = 'oberlin_wx_v4';
+const PA_KEY_STORAGE = 'oberlin_pa_key';
 
-let wxOb={}, wxCin={}, logs=[], selectedTags=new Set();
+// ── State ────────────────────────────────────────────────
+let wxOb={}, wxCin={}, wxPhx={}, logs=[], selectedTags=new Set();
 let map, radarLayers=[], radarFrames=[], frameIdx=0, playing=false, playInterval, radarOpacity=0.75;
-let histLoaded=false;
+let lightningOn=false, lightningMarkers=[], lightningInterval;
+let histLoaded=false, stormsLoaded=false;
 
 // ── Clock ────────────────────────────────────────────────
 function updateClock(){
@@ -358,7 +453,7 @@ function updateClock(){
 setInterval(updateClock,1000); updateClock();
 
 // ── Tabs ─────────────────────────────────────────────────
-const TAB_IDS=['now','radar','history-wx','compare','log','hypotheses','logbook'];
+const TAB_IDS=['now','radar','history-wx','compare','storms','airquality','log','hypotheses','logbook'];
 function switchTab(name){
   TAB_IDS.forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==name));
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',TAB_IDS[i]===name));
@@ -367,30 +462,31 @@ function switchTab(name){
   if(name==='logbook') renderLogbook();
   if(name==='compare'){renderCompare();renderDivHistory();}
   if(name==='log') updateWxPreview();
+  if(name==='airquality') renderAirQuality();
 }
 
 // ── Utils ────────────────────────────────────────────────
 function windDir(deg){return['N','NE','E','SE','S','SW','W','NW'][Math.round(deg/45)%8];}
 function fmt(v){return(v>0?'+':'')+v;}
 function dClass(v){return v>2?'dpos':v<-2?'dneg':'dzero';}
+function uvLabel(uv){
+  if(uv<=2) return'Low';
+  if(uv<=5) return'Moderate';
+  if(uv<=7) return'High';
+  if(uv<=10) return'Very high';
+  return'Extreme';
+}
 
-// ── Fetch with timeout ───────────────────────────────────
-async function fetchT(url, ms=20000){
+async function fetchT(url,ms=20000){
   const ctrl=new AbortController();
-  const timer=setTimeout(()=>ctrl.abort(), ms);
-  try{
-    const r=await fetch(url,{signal:ctrl.signal});
-    clearTimeout(timer);
-    return await r.json();
-  }catch(e){
-    clearTimeout(timer);
-    return null;
-  }
+  const timer=setTimeout(()=>ctrl.abort(),ms);
+  try{const r=await fetch(url,{signal:ctrl.signal});clearTimeout(timer);return await r.json();}
+  catch(e){clearTimeout(timer);return null;}
 }
 
 // ── Weather ──────────────────────────────────────────────
 async function fetchWx(city){
-  const url=`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=7`;
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,uv_index&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,uv_index_max&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=7`;
   const d=await fetchT(url); if(!d) return {};
   const c=d.current;
   return{
@@ -403,37 +499,47 @@ async function fetchWx(city){
     precip:c.precipitation.toFixed(2),
     precipDaily:d.daily.precipitation_sum[0]?.toFixed(2)||'0.00',
     pres:Math.round(c.surface_pressure),
+    uv:Math.round(c.uv_index||0),
     daily:d.daily
   };
 }
 
 async function fetchAQI(city){
-  const d=await fetchT(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${city.lat}&longitude=${city.lon}&current=us_aqi,pm2_5&timezone=America%2FNew_York`);
+  const d=await fetchT(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${city.lat}&longitude=${city.lon}&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide&timezone=auto`);
   if(!d) return {};
-  return{aqi:Math.round(d.current.us_aqi), pm25:d.current.pm2_5?.toFixed(1)};
+  return{
+    aqi:Math.round(d.current.us_aqi),
+    pm25:d.current.pm2_5?.toFixed(1),
+    pm10:d.current.pm10?.toFixed(1),
+    o3:d.current.ozone?.toFixed(1),
+    no2:d.current.nitrogen_dioxide?.toFixed(1)
+  };
 }
 
 async function loadAll(){
   try{
-    const [wo,wc,ao,ac]=await Promise.all([fetchWx(OB),fetchWx(CIN),fetchAQI(OB),fetchAQI(CIN)]);
-    wxOb={...wo,...ao}; wxCin={...wc,...ac};
+    const [wo,wc,wp,ao,ac,ap]=await Promise.all([
+      fetchWx(OB),fetchWx(CIN),fetchWx(PHX),
+      fetchAQI(OB),fetchAQI(CIN),fetchAQI(PHX)
+    ]);
+    wxOb={...wo,...ao}; wxCin={...wc,...ac}; wxPhx={...wp,...ap};
     renderNow(); renderCompareDeltas(); updateWxPreview();
   }catch(e){
     document.getElementById('metrics').innerHTML='<p style="color:var(--danger);font-size:13px;">Weather data unavailable.</p>';
   }
 }
 
-// ── Now tab ──────────────────────────────────────────────
+// ── Now ──────────────────────────────────────────────────
 function renderNow(){
   document.getElementById('m-temp').textContent=wxOb.temp+'°F';
   document.getElementById('m-feels').textContent='feels like '+wxOb.feels+'°';
   document.getElementById('m-hum').textContent=wxOb.hum+'%';
   document.getElementById('m-wind').textContent=wxOb.wind+' mph';
   document.getElementById('m-wdir').textContent=wxOb.wdir;
-  // Daily precip total instead of hourly
-  const precip=parseFloat(wxOb.precipDaily||0);
-  document.getElementById('m-precip').textContent=precip>0?wxOb.precipDaily+'"':'0.00"';
+  document.getElementById('m-precip').textContent=(parseFloat(wxOb.precipDaily||0)>0?wxOb.precipDaily:'0.00')+'"';
   document.getElementById('m-pres').textContent=wxOb.pres;
+  document.getElementById('m-uv').textContent=wxOb.uv||'--';
+  document.getElementById('m-uv-label').textContent=wxOb.uv!=null?uvLabel(wxOb.uv):'';
 
   const aqi=wxOb.aqi;
   let cat,note,col;
@@ -475,7 +581,7 @@ function updateSignals(){
     {icon:'🌫',label:`AQI ${wxOb.aqi||'--'}${wxOb.pm25?' · PM2.5 '+wxOb.pm25:''}`,
      note:wxOb.aqi>100?'⚠ Elevated AQI — possible Canadian wildfire smoke.':'AQI within normal range.',alert:wxOb.aqi>100},
     {icon:'⛈',label:`${wxOb.temp}°F · ${wxOb.hum}% RH · ${wxOb.pres} hPa`,
-     note:risk?'⚠ High heat + humidity — convective instability elevated. Radar-invisible cell risk.':'Convective risk low.',alert:risk}
+     note:risk?'⚠ High heat + humidity — convective instability elevated. Radar-invisible/microburst risk.':'Convective risk low.',alert:risk}
   ];
   document.getElementById('signals').innerHTML=sigs.map(s=>
     `<div class="signal${s.alert?' alert':''}">
@@ -484,13 +590,13 @@ function updateSignals(){
     </div>`).join('');
 }
 
-// ── Radar ────────────────────────────────────────────────
+// ── Radar + Lightning ────────────────────────────────────
 function initRadar(){
-  map=L.map('radar-map',{zoomControl:true,attributionControl:false}).setView([OB.lat,OB.lon],8);
+  map=L.map('radar-map',{zoomControl:true,attributionControl:false}).setView([OB.lat,OB.lon],7);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:18}).addTo(map);
   L.circleMarker([OB.lat,OB.lon],{radius:7,color:'#4af0c4',fillColor:'#4af0c4',fillOpacity:.9,weight:2})
     .bindTooltip('Oberlin',{permanent:true,direction:'right'}).addTo(map);
-  L.circleMarker([CIN.lat,CIN.lon],{radius:6,color:'#c084fc',fillColor:'#c084fc',fillOpacity:.9,weight:2})
+  L.circleMarker([CIN.lat,CIN.lon],{radius:5,color:'#c084fc',fillColor:'#c084fc',fillOpacity:.9,weight:2})
     .bindTooltip('Cincinnati',{permanent:true,direction:'right'}).addTo(map);
   loadRainViewer();
 }
@@ -525,92 +631,112 @@ function showFrame(idx){
   }
 }
 
-function scrubFrame(val){ if(playing) stopPlay(); showFrame(parseInt(val)); }
-function togglePlay(){ playing?stopPlay():startPlay(); }
+function scrubFrame(val){if(playing) stopPlay(); showFrame(parseInt(val));}
+function togglePlay(){playing?stopPlay():startPlay();}
 function startPlay(){
-  playing=true;
-  document.getElementById('play-btn').textContent='⏸ Pause';
+  playing=true; document.getElementById('play-btn').textContent='⏸ Pause';
   playInterval=setInterval(()=>showFrame((frameIdx+1)%radarFrames.length),600);
 }
 function stopPlay(){
-  playing=false;
-  document.getElementById('play-btn').textContent='▶ Play';
+  playing=false; document.getElementById('play-btn').textContent='▶ Play';
   clearInterval(playInterval);
 }
 function setOpacity(v){
-  radarOpacity=v;
-  radarLayers.forEach(l=>l.setOpacity(v));
-  ['normal','bright','dim'].forEach(id=>document.getElementById('btn-'+id).classList.remove('active'));
-  const map_={0.75:'normal',1:'bright',0.4:'dim'};
-  document.getElementById('btn-'+(map_[v]||'normal')).classList.add('active');
+  radarOpacity=v; radarLayers.forEach(l=>l.setOpacity(v));
+  ['normal','bright','dim'].forEach(id=>document.getElementById('btn-'+id)?.classList.remove('active'));
+  const k={0.75:'normal',1:'bright',0.4:'dim'};
+  document.getElementById('btn-'+(k[v]||'normal'))?.classList.add('active');
+}
+
+// Lightning via Blitzortung
+async function toggleLightning(){
+  const btn=document.getElementById('btn-lightning');
+  const legend=document.getElementById('lightning-legend');
+  if(lightningOn){
+    lightningOn=false;
+    btn.classList.remove('active');
+    legend.style.display='none';
+    lightningMarkers.forEach(m=>map.removeLayer(m));
+    lightningMarkers=[];
+    clearInterval(lightningInterval);
+  } else {
+    lightningOn=true;
+    btn.classList.add('active');
+    legend.style.display='flex';
+    await loadLightning();
+    lightningInterval=setInterval(loadLightning, 30000);
+  }
+}
+
+async function loadLightning(){
+  if(!lightningOn) return;
+  try{
+    // Blitzortung public JSON feed — last 60 min strikes
+    const d=await fetchT('https://data.blitzortung.org/Data_1/strikes_24h.json', 10000);
+    if(!d) return;
+    lightningMarkers.forEach(m=>map.removeLayer(m));
+    lightningMarkers=[];
+    const now=Date.now()/1000;
+    let count=0;
+    const strikes=Array.isArray(d)?d:d.signals||[];
+    strikes.forEach(s=>{
+      const lat=s[0]||s.lat; const lon=s[1]||s.lon; const ts=s[2]||s.time||now;
+      if(!lat||!lon) return;
+      // Only show strikes within ~300 miles of Oberlin
+      const dlat=lat-OB.lat, dlon=lon-OB.lon;
+      if(Math.abs(dlat)>4||Math.abs(dlon)>6) return;
+      const age=(now-ts)/60; // minutes ago
+      let col='#884444'; let r=3;
+      if(age<=10){col='#fff700';r=5;}
+      else if(age<=20){col='#ffa500';r=4;}
+      else if(age<=30){col='#ff4444';r=3;}
+      const m=L.circleMarker([lat,lon],{radius:r,color:col,fillColor:col,fillOpacity:.8,weight:1});
+      m.addTo(map); lightningMarkers.push(m); count++;
+    });
+    document.getElementById('lightning-count').textContent=count+' strikes in region';
+  }catch(e){}
 }
 
 // ── Historical ───────────────────────────────────────────
 async function loadHistorical(manual=false){
-  if(histLoaded && !manual) return;
-
+  if(histLoaded&&!manual) return;
   const loadBtn=document.getElementById('hist-load-btn');
   const loading=document.getElementById('hist-loading');
   const content=document.getElementById('hist-content');
   const errEl=document.getElementById('hist-error');
-
-  loadBtn.classList.add('hidden');
-  loading.classList.remove('hidden');
-  content.classList.add('hidden');
-  errEl.classList.add('hidden');
+  loadBtn.classList.add('hidden'); loading.classList.remove('hidden');
+  content.classList.add('hidden'); errEl.classList.add('hidden');
 
   const today=new Date();
   const todayStr=today.toISOString().slice(0,10);
   const lastYear=new Date(today); lastYear.setFullYear(today.getFullYear()-1);
-  const lyStr=lastYear.toISOString().slice(0,10);
   const fiveAgo=new Date(today); fiveAgo.setFullYear(today.getFullYear()-5);
-  const fyStr=fiveAgo.toISOString().slice(0,10);
   const recStart=new Date(today); recStart.setFullYear(today.getFullYear()-20);
-  const recStr=recStart.toISOString().slice(0,10);
 
-  // Sequential calls with 20s timeout each
   loading.textContent='Loading last year data... (1/3)';
-  const lyData=await fetchT(
-    `https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${lyStr}&end_date=${lyStr}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FNew_York`,
-    20000
-  );
-
+  const lyData=await fetchT(`https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${lastYear.toISOString().slice(0,10)}&end_date=${lastYear.toISOString().slice(0,10)}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=America%2FNew_York`,20000);
   loading.textContent='Loading 5-year average... (2/3)';
-  const avgData=await fetchT(
-    `https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${fyStr}&end_date=${todayStr}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York`,
-    20000
-  );
-
+  const avgData=await fetchT(`https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${fiveAgo.toISOString().slice(0,10)}&end_date=${todayStr}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York`,20000);
   loading.textContent='Loading records... (3/3)';
-  const recData=await fetchT(
-    `https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${recStr}&end_date=${todayStr}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York`,
-    20000
-  );
+  const recData=await fetchT(`https://archive-api.open-meteo.com/v1/archive?latitude=${OB.lat}&longitude=${OB.lon}&start_date=${recStart.toISOString().slice(0,10)}&end_date=${todayStr}&daily=temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FNew_York`,20000);
 
   loading.classList.add('hidden');
-
-  // Check if all failed
-  if(!lyData && !avgData && !recData){
+  if(!lyData&&!avgData&&!recData){
     errEl.textContent='Archive API unavailable — try again in a few minutes.';
     errEl.classList.remove('hidden');
-    loadBtn.textContent='Retry';
-    loadBtn.classList.remove('hidden');
-    return;
+    loadBtn.textContent='Retry'; loadBtn.classList.remove('hidden'); return;
   }
 
-  // Last year
   const lyHigh=lyData?Math.round(lyData.daily.temperature_2m_max[0]):null;
   const lyLow=lyData?Math.round(lyData.daily.temperature_2m_min[0]):null;
   const lyPrecip=lyData?lyData.daily.precipitation_sum[0]?.toFixed(2):'--';
 
-  // 5-year average — filter to ±3 days of today's calendar date
-  let avgHighs=[], avgLows=[];
+  let avgHighs=[],avgLows=[];
   if(avgData){
     const todMD=today.getMonth()*100+today.getDate();
     avgData.daily.time.forEach((t,i)=>{
       const d=new Date(t+'T12:00:00');
-      const dMD=d.getMonth()*100+d.getDate();
-      if(Math.abs(dMD-todMD)<=3){
+      if(Math.abs((d.getMonth()*100+d.getDate())-todMD)<=3){
         if(avgData.daily.temperature_2m_max[i]!=null) avgHighs.push(avgData.daily.temperature_2m_max[i]);
         if(avgData.daily.temperature_2m_min[i]!=null) avgLows.push(avgData.daily.temperature_2m_min[i]);
       }
@@ -619,16 +745,13 @@ async function loadHistorical(manual=false){
   const avgHigh=avgHighs.length?Math.round(avgHighs.reduce((a,b)=>a+b,0)/avgHighs.length):null;
   const avgLow=avgLows.length?Math.round(avgLows.reduce((a,b)=>a+b,0)/avgLows.length):null;
 
-  // Records
   let recHigh=-999,recHighYear='',recLow=999,recLowYear='';
   if(recData){
     const todMD=today.getMonth()*100+today.getDate();
     recData.daily.time.forEach((t,i)=>{
       const d=new Date(t+'T12:00:00');
-      const dMD=d.getMonth()*100+d.getDate();
-      if(Math.abs(dMD-todMD)<=3){
-        const h=recData.daily.temperature_2m_max[i];
-        const l=recData.daily.temperature_2m_min[i];
+      if(Math.abs((d.getMonth()*100+d.getDate())-todMD)<=3){
+        const h=recData.daily.temperature_2m_max[i]; const l=recData.daily.temperature_2m_min[i];
         if(h!=null&&h>recHigh){recHigh=Math.round(h);recHighYear=t.slice(0,4);}
         if(l!=null&&l<recLow){recLow=Math.round(l);recLowYear=t.slice(0,4);}
       }
@@ -647,15 +770,15 @@ async function loadHistorical(manual=false){
       <div class="hist-row"><span class="hist-label">Low</span><span class="hist-val">${todayLow||'--'}°F</span></div>
       <div class="hist-row"><span class="hist-label">Current</span><span class="hist-val">${wxOb.temp||'--'}°F</span></div>
       <div class="hist-row"><span class="hist-label">Precip today</span><span class="hist-val${todayPrecip>0?' hot':''}">${todayPrecip!=null?todayPrecip.toFixed(2)+'"':'--'}</span></div>
-      <div class="hist-row"><span class="hist-label">Humidity</span><span class="hist-val">${wxOb.hum||'--'}%</span></div>
+      <div class="hist-row"><span class="hist-label">UV Index</span><span class="hist-val">${wxOb.uv||'--'}</span></div>
       <div class="hist-row"><span class="hist-label">AQI</span><span class="hist-val">${wxOb.aqi||'--'}</span></div>
     </div>
     <div class="hist-col">
-      <div class="hist-col-title">📆 This date last year</div>
+      <div class="hist-col-title">📆 Last year</div>
       <div class="hist-row"><span class="hist-label">High</span><span class="hist-val">${lyHigh!=null?lyHigh+'°F':'--'}</span></div>
       <div class="hist-row"><span class="hist-label">Low</span><span class="hist-val">${lyLow!=null?lyLow+'°F':'--'}</span></div>
       <div class="hist-row"><span class="hist-label">Precip</span><span class="hist-val">${lyPrecip!=null?lyPrecip+'"':'--'}</span></div>
-      <div class="hist-row"><span class="hist-label">vs Today high</span><span class="hist-val ${todayHigh&&lyHigh&&todayHigh-lyHigh>3?'hot':todayHigh&&lyHigh&&todayHigh-lyHigh<-3?'cold':''}">${todayHigh&&lyHigh!=null?fmt(todayHigh-lyHigh)+'°':'--'}</span></div>
+      <div class="hist-row"><span class="hist-label">vs Today</span><span class="hist-val ${todayHigh&&lyHigh&&todayHigh-lyHigh>3?'hot':todayHigh&&lyHigh&&todayHigh-lyHigh<-3?'cold':''}">${todayHigh&&lyHigh!=null?fmt(todayHigh-lyHigh)+'°':'--'}</span></div>
     </div>
     <div class="hist-col">
       <div class="hist-col-title">📊 5-yr avg + records</div>
@@ -666,7 +789,6 @@ async function loadHistorical(manual=false){
       <div class="hist-row"><span class="hist-label">Record low</span><span class="hist-val cold">${recLow<999?recLow+'°F':'--'}${recLowYear?`<span class="record-badge record-low">${recLowYear}</span>`:''}</span></div>
     </div>`;
 
-  // Anomaly bar
   const anomEl=document.getElementById('anomaly-section');
   if(tempAnomaly!=null){
     const pct=Math.min(100,Math.abs(tempAnomaly)/15*100);
@@ -676,14 +798,9 @@ async function loadHistorical(manual=false){
              :`Within ${Math.abs(tempAnomaly)}°F of the 5-year average — typical for this date.`;
     anomEl.innerHTML=`<div style="font-size:13px;color:var(--text2);margin-bottom:8px;">${msg}</div>
       <div class="anomaly-bar"><div class="anomaly-fill" style="width:${pct}%;background:${col};"></div></div>
-      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:6px;">
-        ${fmt(tempAnomaly)}°F vs 5-yr avg${recHigh>-999?' · Record high '+recHigh+'°F ('+recHighYear+')':''}
-      </div>`;
-  } else {
-    anomEl.innerHTML=`<div style="font-size:13px;color:var(--text3);">Anomaly data unavailable — archive API may have timed out. Try refreshing.</div>`;
-  }
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:6px;">${fmt(tempAnomaly)}°F vs 5-yr avg${recHigh>-999?' · Record high '+recHigh+'°F ('+recHighYear+')':''}</div>`;
+  } else { anomEl.innerHTML=`<div style="font-size:13px;color:var(--text3);">Anomaly data unavailable.</div>`; }
 
-  // Week forecast with avg comparison
   if(wxOb.daily){
     const wrow=document.getElementById('hist-week-row'); wrow.innerHTML='';
     const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -701,37 +818,39 @@ async function loadHistorical(manual=false){
       </div>`;
     }
   }
-
-  content.classList.remove('hidden');
-  histLoaded=true;
+  content.classList.remove('hidden'); histLoaded=true;
 }
 
-// ── Compare ──────────────────────────────────────────────
+// ── Compare — 3 cities ───────────────────────────────────
 function renderCompareDeltas(){
-  if(!wxOb.temp||!wxCin.temp) return;
-  const dT=wxOb.temp-wxCin.temp, dH=wxOb.hum-wxCin.hum;
-  const dA=(wxOb.aqi||0)-(wxCin.aqi||0), dW=wxOb.wind-wxCin.wind;
-  [['d-temp',dT,'°F'],['d-hum',dH,'%'],['d-aqi',dA,''],['d-wind',dW,' mph']].forEach(([id,v,unit])=>{
+  if(!wxOb.temp||!wxCin.temp||!wxPhx.temp) return;
+  const dTcin=wxOb.temp-wxCin.temp, dTphx=wxOb.temp-wxPhx.temp;
+  const dAcin=(wxOb.aqi||0)-(wxCin.aqi||0), dAphx=(wxOb.aqi||0)-(wxPhx.aqi||0);
+  const dHcin=wxOb.hum-wxCin.hum, dHphx=wxOb.hum-wxPhx.hum;
+  [['d-temp-cin',dTcin,'°F'],['d-temp-phx',dTphx,'°F'],
+   ['d-aqi-cin',dAcin,''],['d-aqi-phx',dAphx,''],
+   ['d-hum-cin',dHcin,'%'],['d-hum-phx',dHphx,'%']].forEach(([id,v,u])=>{
     const el=document.getElementById(id);
-    el.textContent=fmt(v)+unit; el.className='delta-val '+dClass(v);
+    if(el){el.textContent=fmt(v)+u; el.className='delta-val '+dClass(v);}
   });
 }
 function renderCompare(){
   renderCompareDeltas();
   const fields=[
-    ['Temperature',wxOb.temp+'°F',wxCin.temp+'°F'],
-    ['Feels like',wxOb.feels+'°F',wxCin.feels+'°F'],
-    ['Humidity',wxOb.hum+'%',wxCin.hum+'%'],
-    ['Wind',wxOb.wind+' mph '+wxOb.wdir,wxCin.wind+' mph '+wxCin.wdir],
-    ['Precip today',wxOb.precipDaily+'"',wxCin.precipDaily+'"'],
-    ['Pressure',wxOb.pres+' hPa',wxCin.pres+' hPa'],
-    ['AQI',wxOb.aqi||'--',wxCin.aqi||'--'],
-    ['PM2.5',(wxOb.pm25||'--')+' μg/m³',(wxCin.pm25||'--')+' μg/m³'],
+    ['Temp',wxOb.temp+'°F',wxCin.temp+'°F',wxPhx.temp+'°F'],
+    ['Feels like',wxOb.feels+'°F',wxCin.feels+'°F',wxPhx.feels+'°F'],
+    ['Humidity',wxOb.hum+'%',wxCin.hum+'%',wxPhx.hum+'%'],
+    ['Wind',wxOb.wind+' mph '+wxOb.wdir,wxCin.wind+' mph '+wxCin.wdir,wxPhx.wind+' mph '+wxPhx.wdir],
+    ['Precip today',wxOb.precipDaily+'"',wxCin.precipDaily+'"',wxPhx.precipDaily+'"'],
+    ['Pressure',wxOb.pres+' hPa',wxCin.pres+' hPa',wxPhx.pres+' hPa'],
+    ['AQI',wxOb.aqi||'--',wxCin.aqi||'--',wxPhx.aqi||'--'],
+    ['UV Index',wxOb.uv||'--',wxCin.uv||'--',wxPhx.uv||'--'],
   ];
-  document.getElementById('ob-rows').innerHTML=fields.map(f=>
-    `<div class="cmp-row"><span class="cmp-label">${f[0]}</span><span class="cmp-val" style="color:var(--accent)">${f[1]}</span></div>`).join('');
-  document.getElementById('cin-rows').innerHTML=fields.map(f=>
-    `<div class="cmp-row"><span class="cmp-label">${f[0]}</span><span class="cmp-val" style="color:var(--cin)">${f[2]}</span></div>`).join('');
+  const cols=[['ob-rows','var(--accent)'],['cin-rows','var(--cin)'],['phx-rows','var(--phx)']];
+  cols.forEach(([id,col],ci)=>{
+    document.getElementById(id).innerHTML=fields.map(f=>
+      `<div class="cmp-row"><span class="cmp-label">${f[0]}</span><span class="cmp-val" style="color:${col}">${f[ci+1]}</span></div>`).join('');
+  });
 }
 function renderDivHistory(){
   const el=document.getElementById('div-history');
@@ -741,7 +860,7 @@ function renderDivHistory(){
   noEl.classList.add('hidden');
   el.innerHTML=withDelta.slice(0,15).map(e=>{
     const o=e.weather,c=e.wxCin;
-    const dT=o.temp-c.temp, dH=o.hum-c.hum, dA=(o.aqi||0)-(c.aqi||0);
+    const dT=o.temp-c.temp,dH=o.hum-c.hum,dA=(o.aqi||0)-(c.aqi||0);
     const score=Math.abs(dT)+Math.abs(dH*.5)+Math.abs(dA*.1);
     const col=score>15?'var(--danger)':score>8?'var(--warn)':'var(--text3)';
     const d=new Date(e.ts);
@@ -750,12 +869,185 @@ function renderDivHistory(){
     if(Math.abs(dH)>=5) parts.push(`hum ${fmt(dH)}%`);
     if(Math.abs(dA)>=10) parts.push(`AQI ${fmt(dA)}`);
     return`<div style="display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;">
-      <span style="font-family:var(--mono);font-size:10px;color:var(--text3);flex-shrink:0;min-width:110px;">
-        ${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})} ${d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--text3);flex-shrink:0;min-width:110px;">${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})} ${d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span>
       <span style="color:var(--text2);flex:1;">${parts.length?parts.join(' · '):'minimal divergence'}</span>
       <span style="font-family:var(--mono);font-size:12px;font-weight:500;color:${col}">${Math.round(score)}</span>
     </div>`;
   }).join('');
+}
+
+// ── NOAA Storm Reports ───────────────────────────────────
+async function loadStorms(manual=false){
+  if(stormsLoaded&&!manual) return;
+  const loadBtn=document.getElementById('storms-load-btn');
+  const loading=document.getElementById('storms-loading');
+  const content=document.getElementById('storms-content');
+  const errEl=document.getElementById('storms-error');
+  loadBtn.classList.add('hidden'); loading.classList.remove('hidden');
+  content.classList.add('hidden'); errEl.classList.add('hidden');
+
+  try{
+    // NWS API — active alerts for Ohio zone including Lorain County (OHZ)
+    const alertsUrl='https://api.weather.gov/alerts/active?area=OH&limit=50';
+    const spotter='https://api.weather.gov/alerts/active?point=41.2931,-82.2174';
+
+    const [alertData, pointData]=await Promise.all([
+      fetchT(alertsUrl, 15000),
+      fetchT(spotter, 15000)
+    ]);
+
+    // Also fetch recent storm reports from SPC
+    const spcUrl='https://www.spc.noaa.gov/climo/reports/today_filtered_torn.csv';
+
+    loading.classList.add('hidden');
+
+    let html='';
+    let reportCount=0;
+
+    // Point-based alerts (most relevant — right at Oberlin)
+    if(pointData?.features?.length){
+      pointData.features.forEach(f=>{
+        const p=f.properties;
+        const evt=p.event||'Alert';
+        const areas=p.areaDesc||'';
+        const desc=p.description||'';
+        const inst=p.instruction||'';
+        const onset=p.onset?new Date(p.onset).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+        const sev=p.severity||'';
+        const sevCol=sev==='Extreme'?'var(--danger)':sev==='Severe'?'var(--warn)':sev==='Moderate'?'var(--blue)':'var(--accent)';
+        html+=`<div class="storm-entry">
+          <div class="storm-header">
+            <span class="storm-type" style="color:${sevCol}">⚠ ${evt}</span>
+            <span class="storm-time">${onset}</span>
+            <span class="storm-mag" style="color:${sevCol}">${sev}</span>
+          </div>
+          <div class="storm-location">${areas}</div>
+          ${desc?`<div class="storm-desc">${desc.slice(0,300)}${desc.length>300?'...':''}</div>`:''}
+          ${inst?`<div class="storm-desc" style="color:var(--warn);margin-top:4px;">${inst.slice(0,200)}</div>`:''}
+        </div>`;
+        reportCount++;
+      });
+    }
+
+    // Statewide alerts — filter to NE Ohio / Lorain County area
+    if(alertData?.features?.length){
+      alertData.features.forEach(f=>{
+        const p=f.properties;
+        // Only show if relevant to our area
+        const zones=p.affectedZones||[];
+        const isLocal=zones.some(z=>z.includes('OHZ068')||z.includes('OHZ067')||z.includes('OHZ066')||z.includes('OHZ052'));
+        if(!isLocal&&!p.areaDesc?.includes('Lorain')&&!p.areaDesc?.includes('Cuyahoga')&&!p.areaDesc?.includes('Erie')) return;
+        // Skip if already shown in point alerts
+        const evt=p.event||'Alert';
+        const onset=p.onset?new Date(p.onset).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+        const sev=p.severity||'';
+        const sevCol=sev==='Extreme'?'var(--danger)':sev==='Severe'?'var(--warn)':'var(--text2)';
+        html+=`<div class="storm-entry">
+          <div class="storm-header">
+            <span class="storm-type" style="color:${sevCol}">📡 ${evt}</span>
+            <span class="storm-time">${onset}</span>
+          </div>
+          <div class="storm-location">${p.areaDesc||''}</div>
+          ${p.headline?`<div class="storm-desc">${p.headline}</div>`:''}
+        </div>`;
+        reportCount++;
+      });
+    }
+
+    if(!reportCount){
+      html=`<div style="font-family:var(--mono);font-size:12px;color:var(--accent2);padding:16px 0;">
+        ✓ No active alerts or severe weather reports for Lorain County area.
+      </div>`;
+    }
+
+    document.getElementById('storms-header').textContent=
+      reportCount>0?`${reportCount} active alert${reportCount>1?'s':''} — Lorain County area`:'No active alerts';
+    document.getElementById('storms-list').innerHTML=html;
+    content.classList.remove('hidden');
+    stormsLoaded=true;
+
+    // Add refresh button
+    loadBtn.textContent='Refresh'; loadBtn.classList.remove('hidden');
+  }catch(e){
+    loading.classList.add('hidden');
+    errEl.textContent='NOAA API unavailable — check connection.';
+    errEl.classList.remove('hidden');
+    loadBtn.textContent='Retry'; loadBtn.classList.remove('hidden');
+  }
+}
+
+// ── Air Quality tab ──────────────────────────────────────
+function renderAirQuality(){
+  document.getElementById('aq-aqi-num').textContent=wxOb.aqi||'--';
+  document.getElementById('aq-aqi-num').style.color=aqiColor(wxOb.aqi);
+  document.getElementById('aq-aqi-cat').textContent=aqiCat(wxOb.aqi);
+  document.getElementById('aq-pm25').textContent=wxOb.pm25||'--';
+  document.getElementById('aq-pm10').textContent=wxOb.pm10||'--';
+  document.getElementById('aq-o3').textContent=wxOb.o3||'--';
+  document.getElementById('aq-no2').textContent=wxOb.no2||'--';
+
+  // Check for saved Purple Air key
+  const paKey=localStorage.getItem(PA_KEY_STORAGE);
+  if(paKey){
+    document.getElementById('pa-key-input').value=paKey;
+    loadPurpleAir(paKey);
+  }
+}
+
+function aqiColor(aqi){
+  if(!aqi) return 'var(--text3)';
+  if(aqi<=50) return '#00e400';
+  if(aqi<=100) return '#c8c800';
+  if(aqi<=150) return '#ff7e00';
+  if(aqi<=200) return '#ff0000';
+  return '#8f3f97';
+}
+function aqiCat(aqi){
+  if(!aqi) return '--';
+  if(aqi<=50) return 'Good';
+  if(aqi<=100) return 'Moderate';
+  if(aqi<=150) return 'Unhealthy for Sensitive Groups';
+  if(aqi<=200) return 'Unhealthy';
+  return 'Very Unhealthy+';
+}
+
+function savePurpleAirKey(){
+  const key=document.getElementById('pa-key-input').value.trim();
+  if(!key){document.getElementById('pa-status').textContent='Please enter a key.';return;}
+  localStorage.setItem(PA_KEY_STORAGE,key);
+  document.getElementById('pa-status').textContent='Key saved. Loading sensor data...';
+  loadPurpleAir(key);
+}
+
+async function loadPurpleAir(key){
+  try{
+    // Purple Air API — sensors near Oberlin (bounding box)
+    const url=`https://api.purpleair.com/v1/sensors?fields=name,latitude,longitude,pm2.5,pm2.5_24hour,humidity,temperature&location_type=0&nwlng=-83.0&selat=41.8&nwlat=41.8&selng=-81.5`;
+    const r=await fetch(url,{headers:{'X-API-Key':key}});
+    if(!r.ok){document.getElementById('pa-status').textContent='Invalid key or no sensors found.';return;}
+    const d=await r.json();
+    const sensors=d.data||[];
+    if(!sensors.length){
+      document.getElementById('pa-status').textContent='No Purple Air sensors found near Oberlin (44074). The coverage may be sparse in your area.';
+      return;
+    }
+    document.getElementById('pa-data').classList.remove('hidden');
+    document.getElementById('pa-sensors').innerHTML=sensors.slice(0,5).map(s=>{
+      const fields=d.fields;
+      const name=s[fields.indexOf('name')];
+      const pm25=s[fields.indexOf('pm2.5')]?.toFixed(1);
+      const pm25_24=s[fields.indexOf('pm2.5_24hour')]?.toFixed(1);
+      return`<div class="storm-entry">
+        <div class="storm-header"><span style="font-family:var(--mono);font-size:13px;color:var(--text)">${name}</span></div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--text2);margin-top:4px;">
+          PM2.5 now: <span style="color:${aqiColor(pm25*4)}">${pm25||'--'} μg/m³</span> · 24hr avg: ${pm25_24||'--'} μg/m³
+        </div>
+      </div>`;
+    }).join('');
+    document.getElementById('pa-status').textContent=`✓ ${sensors.length} sensor${sensors.length>1?'s':''} found nearby.`;
+  }catch(e){
+    document.getElementById('pa-status').textContent='Error loading Purple Air data.';
+  }
 }
 
 // ── Log ──────────────────────────────────────────────────
@@ -767,7 +1059,7 @@ function togglePill(el){
 function updateWxPreview(){
   if(!wxOb.temp) return;
   document.getElementById('wx-preview').textContent=
-    `OB: ${wxOb.temp}°F · ${wxOb.hum}% RH · ${wxOb.precipDaily}" today · AQI ${wxOb.aqi||'--'} | CIN: ${wxCin.temp||'--'}°F · AQI ${wxCin.aqi||'--'}`;
+    `OB: ${wxOb.temp}°F · ${wxOb.hum}% RH · ${wxOb.precipDaily}" · UV ${wxOb.uv||'--'} · AQI ${wxOb.aqi||'--'} | CIN: ${wxCin.temp||'--'}°F | PHX: ${wxPhx.temp||'--'}°F`;
 }
 function loadLogs(){
   try{const r=localStorage.getItem(STORAGE_KEY);logs=r?JSON.parse(r):[];}catch(e){logs=[];}
@@ -781,7 +1073,8 @@ function saveLog(){
     rain:document.getElementById('log-rain').value,
     vis:document.getElementById('log-vis').value,
     weather:{...wxOb},
-    wxCin:{...wxCin}
+    wxCin:{...wxCin},
+    wxPhx:{...wxPhx}
   });
   saveLogs();
   document.getElementById('log-status').textContent='✓ Saved — '+new Date().toLocaleString();
@@ -799,17 +1092,17 @@ function renderHypotheses(){
   const avgDelta=withD.length?(withD.reduce((a,l)=>a+(l.weather.temp-l.wxCin.temp),0)/withD.length).toFixed(1):null;
   const hypos=[
     {title:'01 / Landfill methane microclimate',cls:'mb',
-     desc:'Republic Services landfill emits methane that may affect local heat retention, fog, and odor — especially when wind is S/SW.',
+     desc:'Republic Services landfill emits methane affecting local heat retention, fog, and odor — especially when wind is S/SW.',
      tag:'methane',alt:'wind-shift',
      detail:()=>{const m=logs.filter(l=>l.tags.includes('methane'));const sw=m.filter(l=>['S','SW'].includes(l.weather?.wdir)).length;return m.length?`${sw}/${m.length} methane events had S/SW wind.`:''}},
     {title:'02 / Canadian wildfire smoke transport',cls:'sb',
-     desc:'Smoke plumes create AQI events over Oberlin. Cincinnati AQI delta helps isolate regional vs hyper-local smoke.',
+     desc:'Smoke plumes create AQI events over Oberlin. Cincinnati AQI delta isolates regional vs hyper-local smoke.',
      tag:'smoke',alt:null,
-     detail:()=>{const s=logs.filter(l=>l.tags.includes('smoke'));const h=s.filter(l=>l.weather?.aqi&&l.wxCin?.aqi&&l.weather.aqi>l.wxCin.aqi+15).length;return s.length?`${h}/${s.length} smoke events: Oberlin AQI was 15+ pts above Cincinnati.`:'';}},
-    {title:'03 / Sub-radar convective downpours',cls:'rb',
-     desc:'Sudden heavy rain develops and collapses faster than NEXRAD refresh cycles. High heat + humidity may be precursors.',
-     tag:'radar-miss',alt:null,
-     detail:()=>{const r=logs.filter(l=>l.tags.includes('radar-miss'));const h=r.filter(l=>l.weather?.temp&&l.wxCin?.temp&&l.weather.temp>l.wxCin.temp+3).length;return r.length?`${h}/${r.length} radar-miss events: Oberlin was 3°F+ hotter than Cincinnati.`:''}}
+     detail:()=>{const s=logs.filter(l=>l.tags.includes('smoke'));const h=s.filter(l=>l.weather?.aqi&&l.wxCin?.aqi&&l.weather.aqi>l.wxCin.aqi+15).length;return s.length?`${h}/${s.length} events: Oberlin AQI was 15+ pts above Cincinnati.`:''}},
+    {title:'03 / Sub-radar convective events',cls:'rb',
+     desc:'Sudden heavy rain and microbursts develop faster than NEXRAD refresh cycles. Record heat + humidity are precursors.',
+     tag:'radar-miss',alt:'microburst',
+     detail:()=>{const r=logs.filter(l=>l.tags.includes('radar-miss')||l.tags.includes('microburst'));const h=r.filter(l=>l.weather?.temp&&l.wxCin?.temp&&l.weather.temp>l.wxCin.temp+3).length;return r.length?`${h}/${r.length} events: Oberlin was 3°F+ hotter than Cincinnati.`:''}}
   ];
   document.getElementById('hypo-list').innerHTML=hypos.map(h=>{
     const count=logs.filter(l=>l.tags.includes(h.tag)||(h.alt&&l.tags.includes(h.alt))).length;
@@ -823,13 +1116,15 @@ function renderHypotheses(){
     </div>`;
   }).join('');
   const pt=document.getElementById('pattern-text');
-  if(!total){pt.textContent='No entries yet. Log daily observations to build pattern data.';return;}
+  if(!total){pt.textContent='No entries yet.';return;}
   const mC=logs.filter(l=>l.tags.includes('methane')).length;
   const sC=logs.filter(l=>l.tags.includes('smoke')).length;
-  const rC=logs.filter(l=>l.tags.includes('radar-miss')).length;
-  pt.innerHTML=`${total} entries logged. Methane: <strong>${mC}</strong>. Smoke: <strong>${sC}</strong>. Radar-miss: <strong>${rC}</strong>.`
+  const rC=logs.filter(l=>l.tags.includes('radar-miss')||l.tags.includes('microburst')).length;
+  const phxEntries=logs.filter(l=>l.wxPhx?.temp).length;
+  pt.innerHTML=`${total} entries logged. Methane: <strong>${mC}</strong>. Smoke: <strong>${sC}</strong>. Convective events: <strong>${rC}</strong>.`
     +(avgDelta?` Avg temp delta vs Cincinnati: <strong>${avgDelta>0?'+':''}${avgDelta}°F</strong>.`:'')
-    +` Export CSV from the Logbook tab to run deeper analysis.`;
+    +(phxEntries?` ${phxEntries} entries include Phoenix comparison data.`:'')
+    +` Export CSV from the Logbook tab for deeper analysis.`;
 }
 
 // ── Logbook ──────────────────────────────────────────────
@@ -844,15 +1139,17 @@ function renderLogbook(){
     const d=new Date(e.ts);
     const ds=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+' · '+
              d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    const o=e.weather,c=e.wxCin;
-    const wxStr=o?`OB: ${o.temp}°F · ${o.hum}% RH · ${o.precipDaily||o.precip||'--'}" · AQI ${o.aqi||'--'}`:'';
-    const dStr=(o&&c&&o.temp&&c.temp)?`Δ CIN: ${fmt(o.temp-c.temp)}°F · ${fmt(o.hum-c.hum)}% hum · ${fmt((o.aqi||0)-(c.aqi||0))} AQI`:'';
+    const o=e.weather,c=e.wxCin,p=e.wxPhx;
+    const wxStr=o?`OB: ${o.temp}°F · ${o.hum}% RH · ${o.precipDaily||'--'}" · AQI ${o.aqi||'--'}`:'';
+    const dStr=(o&&c&&o.temp&&c.temp)?`Δ CIN: ${fmt(o.temp-c.temp)}°F · ${fmt(o.hum-c.hum)}% hum`:'';
+    const phxStr=(o&&p&&p.temp)?`PHX: ${p.temp}°F · ${p.hum}% RH`:'';
     return`<div class="log-entry">
       <div class="log-ts">${ds}</div>
       ${e.note?`<div class="log-note">${e.note}</div>`:''}
       ${e.tags.length?`<div class="log-tags">${e.tags.map(t=>`<span class="log-tag ${tc[t]||''}">${t}</span>`).join('')}</div>`:''}
       ${wxStr?`<div class="log-wx">${wxStr}</div>`:''}
       ${dStr?`<div class="log-wx">${dStr}</div>`:''}
+      ${phxStr?`<div class="log-wx" style="color:var(--phx);opacity:.7;">${phxStr}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -861,17 +1158,22 @@ function renderLogbook(){
 function exportCSV(){
   if(!logs.length){alert('No entries to export.');return;}
   const h=['Date','Note','Tags','Rain','Visibility',
-    'OB_Temp','OB_Hum','OB_Wind','OB_WindDir','OB_Pressure','OB_AQI','OB_PM25','OB_PrecipDaily',
-    'CIN_Temp','CIN_Hum','CIN_Wind','CIN_WindDir','CIN_AQI',
-    'Delta_Temp','Delta_Hum','Delta_AQI'];
+    'OB_Temp','OB_Hum','OB_Wind','OB_WindDir','OB_Pressure','OB_AQI','OB_PM25','OB_PrecipDaily','OB_UV',
+    'CIN_Temp','CIN_Hum','CIN_AQI',
+    'PHX_Temp','PHX_Hum','PHX_AQI',
+    'Delta_OB_CIN_Temp','Delta_OB_CIN_Hum','Delta_OB_CIN_AQI',
+    'Delta_OB_PHX_Temp'];
   const rows=logs.map(e=>{
-    const o=e.weather||{},c=e.wxCin||{};
+    const o=e.weather||{},c=e.wxCin||{},p=e.wxPhx||{};
     return[new Date(e.ts).toLocaleString(),(e.note||'').replace(/,/g,'|'),
       e.tags.join('|'),e.rain||'',e.vis||'',
-      o.temp||'',o.hum||'',o.wind||'',o.wdir||'',o.pres||'',o.aqi||'',o.pm25||'',o.precipDaily||'',
-      c.temp||'',c.hum||'',c.wind||'',c.wdir||'',c.aqi||'',
-      (o.temp&&c.temp)?o.temp-c.temp:'',(o.hum&&c.hum)?o.hum-c.hum:'',
-      (o.aqi!=null&&c.aqi!=null)?(o.aqi-c.aqi):''].join(',');
+      o.temp||'',o.hum||'',o.wind||'',o.wdir||'',o.pres||'',o.aqi||'',o.pm25||'',o.precipDaily||'',o.uv||'',
+      c.temp||'',c.hum||'',c.aqi||'',
+      p.temp||'',p.hum||'',p.aqi||'',
+      (o.temp&&c.temp)?o.temp-c.temp:'',
+      (o.hum&&c.hum)?o.hum-c.hum:'',
+      (o.aqi!=null&&c.aqi!=null)?(o.aqi-c.aqi):'',
+      (o.temp&&p.temp)?o.temp-p.temp:''].join(',');
   });
   const a=Object.assign(document.createElement('a'),{
     href:URL.createObjectURL(new Blob([[h.join(','),...rows].join('\n')],{type:'text/csv'})),
