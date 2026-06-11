@@ -291,7 +291,7 @@ select option{background:var(--bg2);}
       <div class="card-title">48-hour precipitation forecast</div>
       <div class="precip-timeline">
         <div class="precip-bar-row" id="precip-bars"></div>
-        <div class="precip-prob-row" id="precip-probs"></div>
+        <div class="precip-prob-row" id="precip-probs-row"></div>
         <div class="precip-labels" id="precip-time-labels"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:8px;">
@@ -563,7 +563,7 @@ function wmoIcon(code){
   if(code<=77) return'❄️';if(code<=82) return'🌦';return'⛈';
 }
 
-async function fetchT(url,ms=20000){
+async function fetchT(url,ms=20000,headers={}){
   const ctrl=new AbortController();
   const timer=setTimeout(()=>ctrl.abort(),ms);
   try{const r=await fetch(url,{signal:ctrl.signal});clearTimeout(timer);return await r.json();}
@@ -1061,10 +1061,11 @@ async function loadStorms(manual=false){
   const content=document.getElementById('storms-content'),errEl=document.getElementById('storms-error');
   loadBtn.classList.add('hidden');loading.classList.remove('hidden');content.classList.add('hidden');errEl.classList.add('hidden');
   try{
-    const [alertData,pointData]=await Promise.all([
-      fetchT('https://api.weather.gov/alerts/active?area=OH&limit=50',15000),
-      fetchT('https://api.weather.gov/alerts/active?point=41.2931,-82.2174',15000)
-    ]);
+ const NWS_HEADERS={'User-Agent':'oberlinweather.site, contact@oberlinweather.site'};
+const [alertData,pointData]=await Promise.all([
+  fetchT('https://api.weather.gov/alerts/active?area=OH&limit=50',15000,NWS_HEADERS),
+  fetchT('https://api.weather.gov/alerts/active?point=41.2931,-82.2174',15000,NWS_HEADERS)
+]);
     loading.classList.add('hidden');
     let html='',reportCount=0;
     if(pointData?.features?.length){
