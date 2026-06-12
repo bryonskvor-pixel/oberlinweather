@@ -291,7 +291,7 @@ select option{background:var(--bg2);}
       <div class="card-title">48-hour precipitation forecast</div>
       <div class="precip-timeline">
         <div class="precip-bar-row" id="precip-bars"></div>
-        <div class="precip-prob-row" id="precip-prob-row"></div>
+        <div class="precip-prob-row" id="precip-probs"></div>
         <div class="precip-labels" id="precip-time-labels"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:8px;">
@@ -345,6 +345,8 @@ select option{background:var(--bg2);}
         <button class="radar-btn" id="btn-bright" onclick="setOpacity(1)">Bright</button>
         <button class="radar-btn" id="btn-dim" onclick="setOpacity(0.4)">Dim</button>
         <button class="radar-btn" id="btn-lightning" onclick="toggleLightning()">⚡ Lightning</button>
+        <button class="radar-btn" id="btn-fires" onclick="toggleFires()">🔥 Active Fires</button>
+        <button class="radar-btn" id="btn-smoke" onclick="toggleSmoke()">🌫 Smoke Plumes</button>
       </div>
       <div class="lightning-legend" id="lightning-legend" style="display:none;">
         <span><span class="legend-dot" style="background:#fff700;"></span>0–10 min</span>
@@ -353,8 +355,20 @@ select option{background:var(--bg2);}
         <span><span class="legend-dot" style="background:#884444;"></span>30–60 min</span>
         <span id="lightning-count" style="margin-left:auto;"></span>
       </div>
+      <div class="lightning-legend" id="fire-legend" style="display:none;">
+        <span><span class="legend-dot" style="background:#ff4500;"></span>High confidence fire</span>
+        <span><span class="legend-dot" style="background:#ff8c00;"></span>Nominal confidence</span>
+        <span><span class="legend-dot" style="background:#ffd700;"></span>Low confidence</span>
+        <span id="fire-count" style="margin-left:auto;"></span>
+      </div>
+      <div class="lightning-legend" id="smoke-legend" style="display:none;">
+        <span><span class="legend-dot" style="background:rgba(180,140,100,0.7);"></span>Light smoke</span>
+        <span><span class="legend-dot" style="background:rgba(140,100,60,0.7);"></span>Medium smoke</span>
+        <span><span class="legend-dot" style="background:rgba(100,60,20,0.8);"></span>Heavy smoke</span>
+        <span id="smoke-count" style="margin-left:auto;"></span>
+      </div>
       <div style="margin-top:10px;font-size:12px;color:var(--text3);font-family:var(--mono);">
-        ⚡ Cells appearing and vanishing in 1–2 frames = radar-invisible events. Log immediately.
+        ⚡ Cells appearing and vanishing in 1–2 frames = radar-invisible events. Log immediately. · 🔥 NASA FIRMS satellite fires · 🌫 NOAA HMS smoke polygons
       </div>
     </div>
   </div>
@@ -411,6 +425,19 @@ select option{background:var(--bg2);}
 
   <!-- AIR QUALITY -->
   <div id="tab-airquality" class="hidden">
+    <!-- Smoke Transport Status -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title">🌫 Canadian Wildfire Smoke Transport — Today</div>
+      <div id="smoke-status-panel">
+        <div style="font-family:var(--mono);font-size:12px;color:var(--text3);">Loading smoke forecast...</div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="loadHMSSmoke()">Refresh smoke data</button>
+        <a href="https://www.ospo.noaa.gov/Products/land/hms.html" target="_blank" style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:6px 0;text-decoration:none;">NOAA HMS →</a>
+        <a href="https://firms.modaps.eosdis.nasa.gov/map/" target="_blank" style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:6px 0;text-decoration:none;">NASA FIRMS map →</a>
+        <a href="https://ciffc.net" target="_blank" style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:6px 0;text-decoration:none;">CIFFC →</a>
+      </div>
+    </div>
     <div class="card" style="margin-bottom:14px;">
       <div class="card-title">Open-Meteo AQI — model based · Oberlin</div>
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">
@@ -525,6 +552,7 @@ const PA_KEY_STORAGE = 'oberlin_pa_key';
 let wxOb={}, wxCin={}, wxPhx={}, hourlyData={}, logs=[], selectedTags=new Set();
 let map, radarLayers=[], radarFrames=[], frameIdx=0, playing=false, playInterval, radarOpacity=0.75;
 let lightningOn=false, lightningMarkers=[], lightningInterval;
+let firesOn=false, fireMarkers=[], smokeOn=false, smokeLayer=null;
 let histLoaded=false, stormsLoaded=false, hourlyLoaded=false;
 
 // ── Clock ────────────────────────────────────────────────
@@ -563,7 +591,7 @@ function wmoIcon(code){
   if(code<=77) return'❄️';if(code<=82) return'🌦';return'⛈';
 }
 
-async function fetchT(url,ms=20000,headers={}){
+async function fetchT(url,ms=20000){
   const ctrl=new AbortController();
   const timer=setTimeout(()=>ctrl.abort(),ms);
   try{const r=await fetch(url,{signal:ctrl.signal});clearTimeout(timer);return await r.json();}
@@ -908,6 +936,208 @@ async function loadLightning(){
   }catch(e){}
 }
 
+// ── NASA FIRMS Fire Layer ────────────────────────────────
+const FIRMS_KEY='d38b4c77ab24569a72b0e8b17afbd71e'; // Public demo key
+
+async function toggleFires(){
+  const btn=document.getElementById('btn-fires');
+  const legend=document.getElementById('fire-legend');
+  if(firesOn){
+    firesOn=false;btn.classList.remove('active');legend.style.display='none';
+    fireMarkers.forEach(m=>map.removeLayer(m));fireMarkers=[];
+  }else{
+    firesOn=true;btn.classList.add('active');legend.style.display='flex';
+    document.getElementById('fire-count').textContent='Loading fires...';
+    await loadFIRMS();
+  }
+}
+
+async function loadFIRMS(){
+  if(!firesOn) return;
+  try{
+    // VIIRS SNPP NRT — Canada + northern US bounding box, last 1 day
+    const bbox='-141,42,-52,72';
+    const url=`https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_KEY}/VIIRS_SNPP_NRT/${bbox}/1`;
+    const r=await fetch(url);
+    if(!r.ok) throw new Error('FIRMS unavailable');
+    const text=await r.text();
+    const lines=text.trim().split('\n');
+    if(lines.length<2){document.getElementById('fire-count').textContent='No active fires in region';return;}
+    const headers=lines[0].split(',');
+    const latIdx=headers.indexOf('latitude');
+    const lonIdx=headers.indexOf('longitude');
+    const confIdx=headers.indexOf('confidence');
+    const frpIdx=headers.indexOf('frp'); // fire radiative power
+
+    fireMarkers.forEach(m=>map.removeLayer(m));fireMarkers=[];
+    let count=0;
+    lines.slice(1).forEach(line=>{
+      const cols=line.split(',');
+      const lat=parseFloat(cols[latIdx]);
+      const lon=parseFloat(cols[lonIdx]);
+      const conf=cols[confIdx]||'n';
+      const frp=parseFloat(cols[frpIdx])||1;
+      if(isNaN(lat)||isNaN(lon)) return;
+      // Color by confidence
+      let col='#ffd700', r=3;
+      if(conf==='h'||conf==='high'){col='#ff4500';r=Math.min(8,3+Math.log(frp));}
+      else if(conf==='n'||conf==='nominal'){col='#ff8c00';r=Math.min(6,2+Math.log(frp));}
+      const m=L.circleMarker([lat,lon],{radius:Math.max(3,r),color:col,fillColor:col,fillOpacity:.85,weight:1})
+        .bindTooltip(`🔥 Fire · FRP: ${frp.toFixed(0)} MW · Conf: ${conf}`,{direction:'top'});
+      m.addTo(map);fireMarkers.push(m);count++;
+    });
+    document.getElementById('fire-count').textContent=`${count} active fire${count!==1?'s':''} detected`;
+  }catch(e){
+    document.getElementById('fire-count').textContent='Fire data unavailable — try again';
+    console.warn('FIRMS error:',e);
+  }
+}
+
+// ── NOAA HMS Smoke Polygons ──────────────────────────────
+async function toggleSmoke(){
+  const btn=document.getElementById('btn-smoke');
+  const legend=document.getElementById('smoke-legend');
+  if(smokeOn){
+    smokeOn=false;btn.classList.remove('active');legend.style.display='none';
+    if(smokeLayer){map.removeLayer(smokeLayer);smokeLayer=null;}
+  }else{
+    smokeOn=true;btn.classList.add('active');legend.style.display='flex';
+    document.getElementById('smoke-count').textContent='Loading smoke...';
+    await loadHMSSmokeMap();
+  }
+}
+
+async function loadHMSSmokeMap(){
+  if(!smokeOn) return;
+  try{
+    const now=new Date();
+    const y=now.getFullYear();
+    const mo=String(now.getMonth()+1).padStart(2,'0');
+    const d=String(now.getDate()).padStart(2,'0');
+    const dateStr=`${y}${mo}${d}`;
+    const url=`https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/GeoJSON/${y}/${mo}/hms_smoke${dateStr}.json`;
+    const r=await fetch(url);
+    if(!r.ok){
+      // Try yesterday if today not available yet
+      const yest=new Date(now-86400000);
+      const y2=yest.getFullYear(),mo2=String(yest.getMonth()+1).padStart(2,'0'),d2=String(yest.getDate()).padStart(2,'0');
+      const url2=`https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/GeoJSON/${y2}/${mo2}/hms_smoke${y2}${mo2}${d2}.json`;
+      const r2=await fetch(url2);
+      if(!r2.ok) throw new Error('HMS unavailable');
+      const d2data=await r2.json();
+      renderSmokeGeoJSON(d2data, `${yest.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`);
+      return;
+    }
+    const data=await r.json();
+    renderSmokeGeoJSON(data, 'Today');
+  }catch(e){
+    document.getElementById('smoke-count').textContent='Smoke data unavailable';
+    console.warn('HMS error:',e);
+  }
+}
+
+function renderSmokeGeoJSON(data, dateLabel){
+  if(smokeLayer){map.removeLayer(smokeLayer);smokeLayer=null;}
+  const densityColors={
+    'Light':'rgba(210,180,140,0.35)',
+    'Medium':'rgba(160,120,70,0.5)',
+    'Heavy':'rgba(110,70,20,0.65)',
+    '5':'rgba(210,180,140,0.35)',
+    '16':'rgba(160,120,70,0.5)',
+    '27':'rgba(110,70,20,0.65)',
+  };
+  let count=0;
+  smokeLayer=L.geoJSON(data,{
+    style:(feature)=>{
+      const density=feature.properties?.Density||feature.properties?.density||'Light';
+      const fill=densityColors[density]||densityColors[String(density)]||'rgba(180,140,100,0.4)';
+      return{fillColor:fill,fillOpacity:0.5,color:'rgba(150,100,50,0.6)',weight:1};
+    },
+    onEachFeature:(feature,layer)=>{
+      const d=feature.properties?.Density||feature.properties?.density||'Unknown';
+      layer.bindTooltip(`🌫 Smoke: ${d} density`,{direction:'top'});
+      count++;
+    },
+    filter:(feature)=>{
+      // Only show smoke over North America
+      const coords=feature.geometry?.coordinates;
+      if(!coords) return true;
+      return true; // Show all — map bounds handle visibility
+    }
+  }).addTo(map);
+  document.getElementById('smoke-count').textContent=`${count} smoke polygon${count!==1?'s':''} · ${dateLabel}`;
+}
+
+// ── HMS Smoke Status for Air tab ─────────────────────────
+async function loadHMSSmoke(){
+  const panel=document.getElementById('smoke-status-panel');
+  if(!panel) return;
+  panel.innerHTML=`<div style="font-family:var(--mono);font-size:12px;color:var(--text3);">Loading NOAA HMS smoke data...</div>`;
+  try{
+    const now=new Date();
+    const y=now.getFullYear(),mo=String(now.getMonth()+1).padStart(2,'0'),d=String(now.getDate()).padStart(2,'0');
+    const url=`https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/GeoJSON/${y}/${mo}/hms_smoke${y}${mo}${d}.json`;
+    let r=await fetch(url);
+    let dateUsed='today';
+    if(!r.ok){
+      const yest=new Date(now-86400000);
+      const y2=yest.getFullYear(),mo2=String(yest.getMonth()+1).padStart(2,'0'),d2=String(yest.getDate()).padStart(2,'0');
+      r=await fetch(`https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/GeoJSON/${y2}/${mo2}/hms_smoke${y2}${mo2}${d2}.json`);
+      dateUsed=yest.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      if(!r.ok) throw new Error('unavailable');
+    }
+    const data=await r.json();
+    const features=data.features||[];
+
+    // Check if any smoke polygon overlaps with the Ohio/Great Lakes region
+    // Rough bounding box: lat 38-43, lon -85 to -78
+    const ohioSmoke=features.filter(f=>{
+      try{
+        const coords=f.geometry?.coordinates;
+        if(!coords) return false;
+        const flat=coords.flat(3);
+        for(let i=0;i<flat.length-1;i+=2){
+          const lon=flat[i],lat=flat[i+1];
+          if(lat>=38&&lat<=44&&lon>=-86&&lon<=-77) return true;
+        }
+        return false;
+      }catch{return false;}
+    });
+
+    const lightCount=features.filter(f=>(f.properties?.Density||'').toString().toLowerCase().includes('light')||f.properties?.Density===5).length;
+    const medCount=features.filter(f=>(f.properties?.Density||'').toString().toLowerCase().includes('medium')||f.properties?.Density===16).length;
+    const heavyCount=features.filter(f=>(f.properties?.Density||'').toString().toLowerCase().includes('heavy')||f.properties?.Density===27).length;
+    const totalNA=features.length;
+    const ohioCount=ohioSmoke.length;
+    const ohioDensities=[...new Set(ohioSmoke.map(f=>f.properties?.Density||'Unknown'))];
+
+    let statusColor=ohioCount>0?'var(--warn)':'var(--accent2)';
+    let statusIcon=ohioCount>0?'⚠':'✓';
+    let statusText=ohioCount>0
+      ?`Smoke detected over Ohio/Great Lakes region — ${ohioCount} polygon${ohioCount>1?'s':''} · Density: ${ohioDensities.join(', ')}`
+      :'No smoke polygons detected over Ohio/Great Lakes region today.';
+
+    panel.innerHTML=`
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <span style="font-size:24px;">${ohioCount>0?'🌫':'✅'}</span>
+        <div>
+          <div style="font-family:var(--mono);font-size:13px;font-weight:500;color:${statusColor};">${statusIcon} ${statusText}</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:4px;">Data: ${dateUsed} · Source: NOAA Hazard Mapping System</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;">
+        <div class="metric"><div class="metric-label">Total NA</div><div class="metric-val" style="font-size:18px;">${totalNA}</div><div class="metric-sub">smoke polygons</div></div>
+        <div class="metric"><div class="metric-label">Light</div><div class="metric-val" style="font-size:18px;color:rgba(210,180,140,1);">${lightCount}</div><div class="metric-sub">polygons</div></div>
+        <div class="metric"><div class="metric-label">Medium</div><div class="metric-val" style="font-size:18px;color:var(--warn);">${medCount}</div><div class="metric-sub">polygons</div></div>
+        <div class="metric"><div class="metric-label">Heavy</div><div class="metric-val" style="font-size:18px;color:var(--danger);">${heavyCount}</div><div class="metric-sub">polygons</div></div>
+        <div class="metric"><div class="metric-label">Over Ohio</div><div class="metric-val" style="font-size:18px;color:${statusColor};">${ohioCount}</div><div class="metric-sub">polygons</div></div>
+      </div>
+      ${ohioCount>0?`<div style="font-size:12px;color:var(--warn);font-family:var(--mono);margin-top:10px;padding:8px;background:rgba(240,169,74,.08);border-radius:6px;border:1px solid rgba(240,169,74,.2);">⚠ Smoke is over your region. Check solar radiation on the Now tab. If solar is below 400 W/m² with elevated AQI, the smoke is actively suppressing sunlight. Log this event.</div>`:''}`;
+  }catch(e){
+    panel.innerHTML=`<div style="font-family:var(--mono);font-size:12px;color:var(--text3);">NOAA HMS data unavailable — try refreshing. Data is typically updated by mid-morning each day.</div>`;
+  }
+}
+
 // ── Historical ───────────────────────────────────────────
 async function loadHistorical(manual=false){
   if(histLoaded&&!manual) return;
@@ -1061,11 +1291,10 @@ async function loadStorms(manual=false){
   const content=document.getElementById('storms-content'),errEl=document.getElementById('storms-error');
   loadBtn.classList.add('hidden');loading.classList.remove('hidden');content.classList.add('hidden');errEl.classList.add('hidden');
   try{
- const NWS_HEADERS={'User-Agent':'oberlinweather.site, contact@oberlinweather.site'};
-const [alertData,pointData]=await Promise.all([
-  fetchT('https://api.weather.gov/alerts/active?area=OH&limit=50',15000,NWS_HEADERS),
-  fetchT('https://api.weather.gov/alerts/active?point=41.2931,-82.2174',15000,NWS_HEADERS)
-]);
+    const [alertData,pointData]=await Promise.all([
+      fetchT('https://api.weather.gov/alerts/active?area=OH&limit=50',15000),
+      fetchT('https://api.weather.gov/alerts/active?point=41.2931,-82.2174',15000)
+    ]);
     loading.classList.add('hidden');
     let html='',reportCount=0;
     if(pointData?.features?.length){
@@ -1107,6 +1336,7 @@ function aqiColor(aqi){if(!aqi)return'var(--text3)';if(aqi<=50)return'#00e400';i
 function aqiCat(aqi){if(!aqi)return'--';if(aqi<=50)return'Good';if(aqi<=100)return'Moderate';if(aqi<=150)return'USG';if(aqi<=200)return'Unhealthy';return'Very Unhealthy+';}
 
 function renderAirQuality(){
+  loadHMSSmoke();
   document.getElementById('aq-aqi-num').textContent=wxOb.aqi||'--';
   document.getElementById('aq-aqi-num').style.color=aqiColor(wxOb.aqi);
   document.getElementById('aq-aqi-cat').textContent=aqiCat(wxOb.aqi);
@@ -1239,6 +1469,7 @@ function clearLogs(){if(confirm('Clear all log entries? This cannot be undone.')
 // ── Init ─────────────────────────────────────────────────
 loadLogs();
 loadAll();
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </script>
 </body>
 </html>
