@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#2db89a">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="OberlinWx">
@@ -25,7 +26,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;}
-body::before{content:'';position:fixed;inset:0;background:url('./hero1.png') center center / cover no-repeat;opacity:0.07;z-index:0;pointer-events:none;}
+body::before{content:'';position:fixed;inset:0;background:url('./hero.png') center center / cover no-repeat;opacity:0.07;z-index:0;pointer-events:none;}
 .app{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:24px 20px;}
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;}
 .header h1{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--accent);letter-spacing:.02em;}
@@ -545,14 +546,7 @@ select option{background:var(--bg2);}
   </div>
 </div>
 
-<script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/sw.js')
-      .then(r=>console.log('SW registered'))
-      .catch(e=>console.warn('SW failed:',e));
-  });
-}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ── Config ───────────────────────────────────────────────
 const OB  = {lat:41.2931, lon:-82.2174, name:'Oberlin'};
@@ -1482,8 +1476,15 @@ function clearLogs(){if(confirm('Clear all log entries? This cannot be undone.')
 // ── Init ─────────────────────────────────────────────────
 loadLogs();
 loadAll();
-
-
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/sw.js')
+      .then(r=>console.log('SW registered'))
+      .catch(e=>console.warn('SW failed:',e));
+  });
+}
 </script>
 </body>
 </html>
