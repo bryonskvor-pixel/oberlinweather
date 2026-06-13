@@ -1,0 +1,48 @@
+{
+  "name": "Oberlin Weather",
+  "short_name": "OberlinWx",
+  "description": "Citizen weather science — Lorain County, OH. Tracking methane, wildfire smoke, and convective events.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0f12",
+  "theme_color": "#2db89a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/ob-weather-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/ob-weather-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["weather", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Now",
+      "short_name": "Now",
+      "description": "Current conditions",
+      "url": "/#now",
+      "icons": [{ "src": "/ob-weather-icon.png", "sizes": "512x512" }]
+    },
+    {
+      "name": "Radar",
+      "short_name": "Radar",
+      "description": "Live animated radar",
+      "url": "/#radar",
+      "icons": [{ "src": "/ob-weather-icon.png", "sizes": "512x512" }]
+    },
+    {
+      "name": "Log",
+      "short_name": "Log",
+      "description": "Daily observation log",
+      "url": "/#log",
+      "icons": [{ "src": "/ob-weather-icon.png", "sizes": "512x512" }]
+    }
+  ]
+}
