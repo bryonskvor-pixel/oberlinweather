@@ -26,7 +26,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;}
-body::before{content:'';position:fixed;inset:0;background:url('./hero1.png') center center / cover no-repeat;opacity:0.87;z-index:0;pointer-events:none;}
+body::before{content:'';position:fixed;inset:0;background:url('./hero.png') center center / cover no-repeat;opacity:0.07;z-index:0;pointer-events:none;}
 .app{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:24px 20px;}
 .header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;}
 .header h1{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--accent);letter-spacing:.02em;}
@@ -298,7 +298,7 @@ select option{background:var(--bg2);}
       <div class="card-title">48-hour precipitation forecast</div>
       <div class="precip-timeline">
         <div class="precip-bar-row" id="precip-bars"></div>
-        <div class="precip-prob-row" id="precip-prob"></div>
+        <div class="precip-prob-row" id="precip-prob-row"></div>
         <div class="precip-labels" id="precip-time-labels"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:8px;">
