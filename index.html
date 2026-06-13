@@ -545,7 +545,14 @@ select option{background:var(--bg2);}
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/sw.js')
+      .then(r=>console.log('SW registered'))
+      .catch(e=>console.warn('SW failed:',e));
+  });
+}
 <script>
 // ── Config ───────────────────────────────────────────────
 const OB  = {lat:41.2931, lon:-82.2174, name:'Oberlin'};
@@ -1476,14 +1483,7 @@ function clearLogs(){if(confirm('Clear all log entries? This cannot be undone.')
 loadLogs();
 loadAll();
 
-<script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('/sw.js')
-      .then(r=>console.log('SW registered'))
-      .catch(e=>console.warn('SW failed:',e));
-  });
-}
+
 </script>
 </body>
 </html>
