@@ -354,6 +354,7 @@ select option{background:var(--bg2);}
         <button class="radar-btn" id="btn-lightning" onclick="toggleLightning()">⚡ Lightning</button>
         <button class="radar-btn" id="btn-fires" onclick="toggleFires()">🔥 Active Fires</button>
         <button class="radar-btn" id="btn-smoke" onclick="toggleSmoke()">🌫 Smoke Plumes</button>
+        <button class="radar-btn" id="btn-nws" onclick="toggleNWS()">📡 NWS Hi-Res</button>
       </div>
       <div class="lightning-legend" id="lightning-legend" style="display:none;">
         <span><span class="legend-dot" style="background:#fff700;"></span>0–10 min</span>
@@ -1074,7 +1075,25 @@ function renderSmokeGeoJSON(data, dateLabel){
   }).addTo(map);
   document.getElementById('smoke-count').textContent=`${count} smoke polygon${count!==1?'s':''} · ${dateLabel}`;
 }
-
+let nwsOn = false, nwsLayer = null;
+function toggleNWS(){
+  const btn = document.getElementById('btn-nws');
+  if(nwsOn){
+    nwsOn = false; btn.classList.remove('active');
+    if(nwsLayer){ map.removeLayer(nwsLayer); nwsLayer = null; }
+  } else {
+    nwsOn = true; btn.classList.add('active');
+    // Hide RainViewer frame while NWS layer is active to avoid double-rendering
+    if(radarLayers[frameIdx] && map.hasLayer(radarLayers[frameIdx])) map.removeLayer(radarLayers[frameIdx]);
+    nwsLayer = L.tileLayer.wms('https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi', {
+      layers: 'nexrad-n0r',
+      format: 'image/png',
+      transparent: true,
+      opacity: radarOpacity,
+      attribution: 'NEXRAD via Iowa Mesonet'
+    }).addTo(map);
+  }
+}
 // ── HMS Smoke Status for Air tab ─────────────────────────
 async function loadHMSSmoke(){
   const panel=document.getElementById('smoke-status-panel');
