@@ -354,7 +354,6 @@ select option{background:var(--bg2);}
         <button class="radar-btn" id="btn-lightning" onclick="toggleLightning()">⚡ Lightning</button>
         <button class="radar-btn" id="btn-fires" onclick="toggleFires()">🔥 Active Fires</button>
         <button class="radar-btn" id="btn-smoke" onclick="toggleSmoke()">🌫 Smoke Plumes</button>
-        <button class="radar-btn" id="btn-nws" onclick="toggleNWS()">📡 NWS Hi-Res</button>
       </div>
       <div class="lightning-legend" id="lightning-legend" style="display:none;">
         <span><span class="legend-dot" style="background:#fff700;"></span>0–10 min</span>
@@ -446,6 +445,27 @@ select option{background:var(--bg2);}
         <a href="https://ciffc.net" target="_blank" style="font-family:var(--mono);font-size:11px;color:var(--text3);padding:6px 0;text-decoration:none;">CIFFC →</a>
       </div>
     </div>
+
+    <!-- AirNow ground monitor -->
+    <div class="card" style="margin-bottom:14px;" id="airnow-card">
+      <div class="card-title">🛰 AirNow — EPA ground monitor (measured, not modeled)</div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px;">
+        <span id="an-aqi-num" style="font-family:var(--mono);font-size:32px;">--</span>
+        <span id="an-aqi-cat" style="font-size:13px;color:var(--text2);"></span>
+      </div>
+      <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:10px;" id="an-area"></div>
+      <div id="an-divergence" style="font-size:12px;font-family:var(--mono);padding:8px;border-radius:6px;"></div>
+    </div>
+
+    <!-- EnviroFlash forecast -->
+    <div class="card" style="margin-bottom:14px;" id="enviroflash-card">
+      <div class="card-title">📋 EnviroFlash Forecast — NOACA / Hamilton Co. Env. Services</div>
+      <div id="ef-oberlin"><div style="font-size:12px;color:var(--text3);font-family:var(--mono);">Loading...</div></div>
+      <div class="divider"></div>
+      <div id="ef-cincinnati"><div style="font-size:12px;color:var(--text3);font-family:var(--mono);">Loading...</div></div>
+      <div id="ef-advisory" style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-top:10px;"></div>
+    </div>
+
     <div class="card" style="margin-bottom:14px;">
       <div class="card-title">Open-Meteo AQI — model based · Oberlin</div>
       <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px;">
@@ -556,6 +576,17 @@ const PHX = {lat:33.4484, lon:-112.0740, name:'Phoenix'};
 const STORAGE_KEY = 'oberlin_wx_v5';
 const PA_KEY_STORAGE = 'oberlin_pa_key';
 
+// AirNow — EPA ground monitor observations
+const AIRNOW_KEY = '2CFD0D48-CFE2-47B1-838F-C902544A15C5'; // Public per-key rate limit; visible client-side by design of this static app
+
+// EnviroFlash RSS forecast feed IDs (NOACA / local air agencies)
+const ENVIROFLASH_OB_ID = 25;  // Cleveland-Akron-Lorain — covers Lorain County / Oberlin
+const ENVIROFLASH_CIN_ID = 24; // Cincinnati (Hamilton Co. Environmental Services)
+
+// EnviroFlash server likely has no CORS headers for direct browser fetch — route through a public CORS proxy.
+// If this proxy goes down, swap in your own Vercel serverless function (e.g. /api/enviroflash?id=25) instead.
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+
 // ── State ────────────────────────────────────────────────
 let wxOb={}, wxCin={}, wxPhx={}, hourlyData={}, logs=[], selectedTags=new Set();
 let map, radarLayers=[], radarFrames=[], frameIdx=0, playing=false, playInterval, radarOpacity=0.75;
@@ -639,6 +670,56 @@ async function fetchAQI(city){
   return{aqi:Math.round(d.current.us_aqi),pm25:d.current.pm2_5?.toFixed(1),pm10:d.current.pm10?.toFixed(1),o3:d.current.ozone?.toFixed(1),no2:d.current.nitrogen_dioxide?.toFixed(1)};
 }
 
+// ── AirNow — EPA ground monitor observations ─────────────
+async function fetchAirNow(city){
+  const url=`https://www.airnowapi.org/aq/observation/latLong/current/?format=application/json&latitude=${city.lat}&longitude=${city.lon}&distance=50&API_KEY=${AIRNOW_KEY}`;
+  const d=await fetchT(url);
+  if(!d||!Array.isArray(d)||!d.length) return {};
+  const pm25=d.find(x=>x.ParameterName==='PM2.5');
+  const ozone=d.find(x=>x.ParameterName==='OZONE');
+  return{
+    anAqi:pm25?.AQI??null,
+    anCat:pm25?.Category?.Name??null,
+    anArea:pm25?.ReportingArea??null,
+    anOzoneAqi:ozone?.AQI??null,
+    anOzoneCat:ozone?.Category?.Name??null
+  };
+}
+
+// ── EnviroFlash — RSS forecast + advisory (via CORS proxy) ───
+function parseEnviroflashHtml(rawXml){
+  const xml=new DOMParser().parseFromString(rawXml,'text/xml');
+  const descRaw=xml.querySelector('item description')?.textContent||'';
+  const div=new DOMParser().parseFromString(descRaw,'text/html');
+  return (div.body.textContent||'').replace(/\s+/g,' ').trim();
+}
+async function fetchEnviroflashForecast(feedId){
+  try{
+    const target=`https://feeds.enviroflash.info/rss/forecast/${feedId}.xml`;
+    const r=await fetch(CORS_PROXY+encodeURIComponent(target));
+    if(!r.ok) return null;
+    const bodyText=parseEnviroflashHtml(await r.text());
+    const todayMatch=bodyText.match(/Today,\s*([\d/]+):\s*(.+?)(?=\s*Tomorrow,|$)/);
+    const tomorrowMatch=bodyText.match(/Tomorrow,\s*([\d/]+):\s*(.+?)(?=\s*Agency:|$)/);
+    return{
+      today: todayMatch?todayMatch[2].trim():null,
+      todayDate: todayMatch?todayMatch[1]:null,
+      tomorrow: tomorrowMatch?tomorrowMatch[2].trim():null,
+      tomorrowDate: tomorrowMatch?tomorrowMatch[1]:null
+    };
+  }catch(e){return null;}
+}
+async function fetchEnviroflashAdvisory(feedId){
+  try{
+    const target=`https://feeds.enviroflash.info/rss/realtime/${feedId}.xml`;
+    const r=await fetch(CORS_PROXY+encodeURIComponent(target));
+    if(!r.ok) return null;
+    const bodyText=parseEnviroflashHtml(await r.text());
+    const noAlert=/no Air Quality Advisory/i.test(bodyText);
+    return{active:!noAlert,text:bodyText};
+  }catch(e){return null;}
+}
+
 async function fetchSoilTemp(){
   const d=await fetchT(`https://api.open-meteo.com/v1/forecast?latitude=${OB.lat}&longitude=${OB.lon}&current=soil_temperature_6cm&temperature_unit=fahrenheit&timezone=America%2FNew_York`);
   return d?.current?.soil_temperature_6cm!=null?Math.round(d.current.soil_temperature_6cm):null;
@@ -646,14 +727,18 @@ async function fetchSoilTemp(){
 
 async function loadAll(){
   try{
-    const [wo,wc,wp,ao,ac,ap,soil]=await Promise.all([
+    const [wo,wc,wp,ao,ac,ap,soil,anOb,anCin,anPhx,efOb,efCin,advOb]=await Promise.all([
       fetchWx(OB, true),fetchWx(CIN),fetchWx(PHX),
       fetchAQI(OB),fetchAQI(CIN),fetchAQI(PHX),
-      fetchSoilTemp()
+      fetchSoilTemp(),
+      fetchAirNow(OB),fetchAirNow(CIN),fetchAirNow(PHX),
+      fetchEnviroflashForecast(ENVIROFLASH_OB_ID),fetchEnviroflashForecast(ENVIROFLASH_CIN_ID),
+      fetchEnviroflashAdvisory(ENVIROFLASH_OB_ID)
     ]);
-    wxOb={...wo,...ao}; wxCin={...wc,...ac}; wxPhx={...wp,...ap};
+    wxOb={...wo,...ao,...anOb}; wxCin={...wc,...ac,...anCin}; wxPhx={...wp,...ap,...anPhx};
     if(soil!=null) wxOb.soilTemp=soil;
     if(wo.hourly) hourlyData=wo.hourly;
+    wxOb.efForecast=efOb; wxCin.efForecast=efCin; wxOb.efAdvisory=advOb;
     renderNow(); renderCompareDeltas(); updateWxPreview();
   }catch(e){
     document.getElementById('metrics').innerHTML='<p style="color:var(--danger);font-size:13px;">Weather data unavailable.</p>';
@@ -762,12 +847,14 @@ function updateSignals(){
   const soilMethaneRisk=wxOb.soilTemp!=null&&wxOb.soilTemp>60;
   // Solar suppression — normal June solar should be 600-900 W/m², if AQI elevated + solar suppressed = smoke
   const smokeSuppression=wxOb.solar!=null&&wxOb.aqi>80&&wxOb.solar<400;
+  // Model vs monitor divergence — flags when Open-Meteo's forecast AQI is badly underselling a live event
+  const anDiverge=wxOb.anAqi!=null&&wxOb.aqi!=null&&(wxOb.anAqi-wxOb.aqi)>50;
 
   const sigs=[
     {icon:'🏭',label:`Wind ${wxOb.wind} mph from ${wxOb.wdir} · Soil ${wxOb.soilTemp!=null?wxOb.soilTemp+'°F':'--'}`,
      note:fromLandfill&&soilMethaneRisk?'⚠ S/SW wind + warm soil ('+wxOb.soilTemp+'°F) — peak methane emission conditions.':fromLandfill?'⚠ Wind from landfill direction (S/SW) — methane odor possible.':soilMethaneRisk?'Soil temp elevated ('+wxOb.soilTemp+'°F) — methane emissions active but wind not from landfill direction.':'Wind not from landfill. Soil conditions normal.',alert:fromLandfill,cls:fromLandfill&&soilMethaneRisk?'alert':''},
-    {icon:'🌫',label:`AQI ${wxOb.aqi||'--'} · Solar ${wxOb.solar||'--'} W/m²`,
-     note:smokeSuppression?'⚠ Elevated AQI with suppressed solar radiation — smoke layer overhead likely.':wxOb.aqi>100?'⚠ Elevated AQI — possible Canadian wildfire smoke. Check solar radiation trend.':'AQI within normal range.',alert:wxOb.aqi>100||smokeSuppression},
+    {icon:'🌫',label:`AQI ${wxOb.aqi||'--'}${wxOb.anAqi!=null?' · Monitor '+wxOb.anAqi:''} · Solar ${wxOb.solar||'--'} W/m²`,
+     note:anDiverge?`🔴 Ground monitor reads ${wxOb.anAqi} (${wxOb.anCat||'--'}) vs model ${wxOb.aqi} — model is badly underselling this event. Trust the monitor.`:smokeSuppression?'⚠ Elevated AQI with suppressed solar radiation — smoke layer overhead likely.':wxOb.aqi>100?'⚠ Elevated AQI — possible Canadian wildfire smoke. Check solar radiation trend.':'AQI within normal range.',alert:wxOb.aqi>100||smokeSuppression||anDiverge},
     {icon:'⛈',label:`CAPE ${wxOb.cape||'<100'} J/kg · ${wxOb.temp}°F · ${wxOb.hum}% RH`,
      note:wxOb.cape>2500&&wxOb.hum>70?'🔴 High CAPE + humidity — severe convective event possible. Monitor radar.':risk?'⚠ Elevated instability — convective development possible. Radar-invisible cell risk.':'Convective risk low.',alert:risk||(wxOb.cape>1000)}
   ];
@@ -1075,25 +1162,7 @@ function renderSmokeGeoJSON(data, dateLabel){
   }).addTo(map);
   document.getElementById('smoke-count').textContent=`${count} smoke polygon${count!==1?'s':''} · ${dateLabel}`;
 }
-let nwsOn = false, nwsLayer = null;
-function toggleNWS(){
-  const btn = document.getElementById('btn-nws');
-  if(nwsOn){
-    nwsOn = false; btn.classList.remove('active');
-    if(nwsLayer){ map.removeLayer(nwsLayer); nwsLayer = null; }
-  } else {
-    nwsOn = true; btn.classList.add('active');
-    // Hide RainViewer frame while NWS layer is active to avoid double-rendering
-    if(radarLayers[frameIdx] && map.hasLayer(radarLayers[frameIdx])) map.removeLayer(radarLayers[frameIdx]);
-    nwsLayer = L.tileLayer.wms('https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi', {
-      layers: 'nexrad-n0r',
-      format: 'image/png',
-      transparent: true,
-      opacity: radarOpacity,
-      attribution: 'NEXRAD via Iowa Mesonet'
-    }).addTo(map);
-  }
-}
+
 // ── HMS Smoke Status for Air tab ─────────────────────────
 async function loadHMSSmoke(){
   const panel=document.getElementById('smoke-status-panel');
@@ -1380,6 +1449,51 @@ function renderAirQuality(){
     solarNote.textContent='Solar radiation nominal at '+wxOb.solar+' W/m². No smoke suppression detected.';
     solarNote.style.color='var(--text3)';
   }
+
+  // ── AirNow ground monitor ──────────────────────────────
+  const anEl=document.getElementById('an-aqi-num');
+  const divEl=document.getElementById('an-divergence');
+  if(wxOb.anAqi!=null){
+    anEl.textContent=wxOb.anAqi;
+    anEl.style.color=aqiColor(wxOb.anAqi);
+    document.getElementById('an-aqi-cat').textContent=wxOb.anCat||'';
+    document.getElementById('an-area').textContent='Nearest reporting area: '+(wxOb.anArea||'--')+(wxOb.anOzoneAqi!=null?' · Ozone AQI '+wxOb.anOzoneAqi+' ('+wxOb.anOzoneCat+')':'');
+    const div=wxOb.anAqi-(wxOb.aqi||0);
+    if(div>50){
+      divEl.textContent=`⚠ Model reads ${wxOb.aqi||'--'} vs monitor ${wxOb.anAqi} — model underestimating by ${div} pts. Trust the monitor.`;
+      divEl.style.background='rgba(240,90,90,.1)';divEl.style.color='var(--danger)';divEl.style.border='1px solid rgba(240,90,90,.3)';
+    }else if(div<-30){
+      divEl.textContent=`Model reads ${wxOb.aqi||'--'} vs monitor ${wxOb.anAqi} — model overestimating by ${Math.abs(div)} pts.`;
+      divEl.style.background='rgba(74,154,240,.08)';divEl.style.color='var(--blue)';divEl.style.border='1px solid rgba(74,154,240,.2)';
+    }else{
+      divEl.textContent=`Model (${wxOb.aqi||'--'}) and monitor (${wxOb.anAqi}) roughly agree.`;
+      divEl.style.background='var(--bg3)';divEl.style.color='var(--text3)';divEl.style.border='1px solid var(--border)';
+    }
+  }else{
+    anEl.textContent='--';anEl.style.color='var(--text3)';
+    document.getElementById('an-aqi-cat').textContent='No nearby monitor reporting';
+    document.getElementById('an-area').textContent='';
+    divEl.textContent='';divEl.style.background='transparent';divEl.style.border='none';
+  }
+
+  // ── EnviroFlash forecast ───────────────────────────────
+  const efOb=wxOb.efForecast;
+  document.getElementById('ef-oberlin').innerHTML = efOb
+    ? `<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:6px;">CLEVELAND-AKRON-LORAIN (covers Oberlin / Lorain Co.)</div>
+       <div style="font-size:13px;color:var(--text);margin-bottom:2px;">Today: <strong>${efOb.today||'--'}</strong></div>
+       <div style="font-size:13px;color:var(--text2);">Tomorrow: <strong>${efOb.tomorrow||'--'}</strong></div>`
+    : `<div style="font-size:12px;color:var(--text3);font-family:var(--mono);">Forecast unavailable</div>`;
+  const efCin=wxCin.efForecast;
+  document.getElementById('ef-cincinnati').innerHTML = efCin
+    ? `<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:6px;">CINCINNATI</div>
+       <div style="font-size:13px;color:var(--text);margin-bottom:2px;">Today: <strong>${efCin.today||'--'}</strong></div>
+       <div style="font-size:13px;color:var(--text2);">Tomorrow: <strong>${efCin.tomorrow||'--'}</strong></div>`
+    : `<div style="font-size:12px;color:var(--text3);font-family:var(--mono);">Forecast unavailable</div>`;
+  const adv=wxOb.efAdvisory;
+  document.getElementById('ef-advisory').textContent = adv
+    ? (adv.active ? '⚠ Active advisory: '+adv.text : '✓ No active air quality advisory for Cleveland-Akron-Lorain.')
+    : '';
+
   const paKey=localStorage.getItem(PA_KEY_STORAGE);
   if(paKey){document.getElementById('pa-key-input').value=paKey;loadPurpleAir(paKey);}
 }
@@ -1413,7 +1527,7 @@ function togglePill(el){el.classList.toggle('on');const v=el.dataset.val;selecte
 function updateWxPreview(){
   if(!wxOb.temp) return;
   document.getElementById('wx-preview').textContent=
-    `OB: ${wxOb.temp}°F · ${wxOb.hum}% RH · ${wxOb.precipDaily}" · CAPE ${wxOb.cape||'--'} · AQI ${wxOb.aqi||'--'} | CIN: ${wxCin.temp||'--'}°F | PHX: ${wxPhx.temp||'--'}°F`;
+    `OB: ${wxOb.temp}°F · ${wxOb.hum}% RH · ${wxOb.precipDaily}" · CAPE ${wxOb.cape||'--'} · AQI ${wxOb.aqi||'--'}${wxOb.anAqi!=null?' (monitor '+wxOb.anAqi+')':''} | CIN: ${wxCin.temp||'--'}°F | PHX: ${wxPhx.temp||'--'}°F`;
 }
 function loadLogs(){try{const r=localStorage.getItem(STORAGE_KEY);logs=r?JSON.parse(r):[];}catch(e){logs=[];}}
 function saveLogs(){localStorage.setItem(STORAGE_KEY,JSON.stringify(logs));}
@@ -1472,7 +1586,7 @@ function renderLogbook(){
     const d=new Date(e.ts);
     const ds=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
     const o=e.weather,c=e.wxCin,p=e.wxPhx;
-    const wxStr=o?`OB: ${o.temp}°F · ${o.hum}% RH · ${o.precipDaily||'--'}" · CAPE ${o.cape||'--'} · AQI ${o.aqi||'--'}`:'';
+    const wxStr=o?`OB: ${o.temp}°F · ${o.hum}% RH · ${o.precipDaily||'--'}" · CAPE ${o.cape||'--'} · AQI ${o.aqi||'--'}${o.anAqi!=null?' (monitor '+o.anAqi+')':''}`:'';
     const dStr=(o&&c&&o.temp&&c.temp)?`Δ CIN: ${fmt(o.temp-c.temp)}°F · ${fmt(o.hum-c.hum)}% hum`:'';
     const phxStr=(p?.temp)?`PHX: ${p.temp}°F · ${p.hum}% RH`:'';
     return`<div class="log-entry"><div class="log-ts">${ds}</div>${e.note?`<div class="log-note">${e.note}</div>`:''}<div class="log-tags">${e.tags.map(t=>`<span class="log-tag ${tc[t]||''}">${t}</span>`).join('')}</div>${wxStr?`<div class="log-wx">${wxStr}</div>`:''} ${dStr?`<div class="log-wx">${dStr}</div>`:''} ${phxStr?`<div class="log-wx" style="color:var(--phx);opacity:.7;">${phxStr}</div>`:''}</div>`;
@@ -1482,10 +1596,10 @@ function renderLogbook(){
 // ── Export ───────────────────────────────────────────────
 function exportCSV(){
   if(!logs.length){alert('No entries to export.');return;}
-  const h=['Date','Note','Tags','Rain','Visibility','OB_Temp','OB_Hum','OB_Wind','OB_WindDir','OB_Gust','OB_Pressure','OB_AQI','OB_PM25','OB_PrecipDaily','OB_UV','OB_CAPE','OB_Solar','OB_SoilTemp','CIN_Temp','CIN_Hum','CIN_AQI','PHX_Temp','PHX_Hum','PHX_AQI','Delta_OB_CIN_Temp','Delta_OB_CIN_Hum','Delta_OB_CIN_AQI','Delta_OB_PHX_Temp'];
+  const h=['Date','Note','Tags','Rain','Visibility','OB_Temp','OB_Hum','OB_Wind','OB_WindDir','OB_Gust','OB_Pressure','OB_AQI','OB_AirNow_AQI','OB_AirNow_Category','OB_PM25','OB_PrecipDaily','OB_UV','OB_CAPE','OB_Solar','OB_SoilTemp','CIN_Temp','CIN_Hum','CIN_AQI','PHX_Temp','PHX_Hum','PHX_AQI','Delta_OB_CIN_Temp','Delta_OB_CIN_Hum','Delta_OB_CIN_AQI','Delta_OB_PHX_Temp','Delta_Model_Monitor_AQI'];
   const rows=logs.map(e=>{
     const o=e.weather||{},c=e.wxCin||{},p=e.wxPhx||{};
-    return[new Date(e.ts).toLocaleString(),(e.note||'').replace(/,/g,'|'),e.tags.join('|'),e.rain||'',e.vis||'',o.temp||'',o.hum||'',o.wind||'',o.wdir||'',o.gust||'',o.pres||'',o.aqi||'',o.pm25||'',o.precipDaily||'',o.uv||'',o.cape||'',o.solar||'',o.soilTemp||'',c.temp||'',c.hum||'',c.aqi||'',p.temp||'',p.hum||'',p.aqi||'',(o.temp&&c.temp)?o.temp-c.temp:'',(o.hum&&c.hum)?o.hum-c.hum:'',(o.aqi!=null&&c.aqi!=null)?(o.aqi-c.aqi):'',(o.temp&&p.temp)?o.temp-p.temp:''].join(',');
+    return[new Date(e.ts).toLocaleString(),(e.note||'').replace(/,/g,'|'),e.tags.join('|'),e.rain||'',e.vis||'',o.temp||'',o.hum||'',o.wind||'',o.wdir||'',o.gust||'',o.pres||'',o.aqi||'',o.anAqi||'',o.anCat||'',o.pm25||'',o.precipDaily||'',o.uv||'',o.cape||'',o.solar||'',o.soilTemp||'',c.temp||'',c.hum||'',c.aqi||'',p.temp||'',p.hum||'',p.aqi||'',(o.temp&&c.temp)?o.temp-c.temp:'',(o.hum&&c.hum)?o.hum-c.hum:'',(o.aqi!=null&&c.aqi!=null)?(o.aqi-c.aqi):'',(o.temp&&p.temp)?o.temp-p.temp:'',(o.anAqi!=null&&o.aqi!=null)?(o.anAqi-o.aqi):''].join(',');
   });
   const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([[h.join(','),...rows].join('\n')],{type:'text/csv'})),download:'oberlinweather-'+new Date().toISOString().slice(0,10)+'.csv'});
   a.click();
