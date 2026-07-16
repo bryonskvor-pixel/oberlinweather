@@ -583,9 +583,10 @@ const AIRNOW_KEY = '2CFD0D48-CFE2-47B1-838F-C902544A15C5'; // Public per-key rat
 const ENVIROFLASH_OB_ID = 25;  // Cleveland-Akron-Lorain — covers Lorain County / Oberlin
 const ENVIROFLASH_CIN_ID = 24; // Cincinnati (Hamilton Co. Environmental Services)
 
-// EnviroFlash server likely has no CORS headers for direct browser fetch — route through a public CORS proxy.
-// If this proxy goes down, swap in your own Vercel serverless function (e.g. /api/enviroflash?id=25) instead.
-const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+// EnviroFlash + HMS both live on NOAA-family servers with no CORS headers for direct browser fetch.
+// Routed through same-origin Vercel functions (/api/enviroflash, /api/hms-smoke) instead of a public
+// CORS proxy — public proxies (AllOrigins, corsproxy.io) turned out to be unreliable or blocked for
+// production domains, so this is the permanent fix rather than another patch.
 
 // ── State ────────────────────────────────────────────────
 let wxOb={}, wxCin={}, wxPhx={}, hourlyData={}, logs=[], selectedTags=new Set();
@@ -695,8 +696,7 @@ function parseEnviroflashHtml(rawXml){
 }
 async function fetchEnviroflashForecast(feedId){
   try{
-    const target=`https://feeds.enviroflash.info/rss/forecast/${feedId}.xml`;
-    const r=await fetch(CORS_PROXY+encodeURIComponent(target));
+    const r=await fetch(`/api/enviroflash?type=forecast&id=${feedId}`);
     if(!r.ok) return null;
     const bodyText=parseEnviroflashHtml(await r.text());
     const todayMatch=bodyText.match(/Today,\s*([\d/]+):\s*(.+?)(?=\s*Tomorrow,|$)/);
@@ -711,8 +711,7 @@ async function fetchEnviroflashForecast(feedId){
 }
 async function fetchEnviroflashAdvisory(feedId){
   try{
-    const target=`https://feeds.enviroflash.info/rss/realtime/${feedId}.xml`;
-    const r=await fetch(CORS_PROXY+encodeURIComponent(target));
+    const r=await fetch(`/api/enviroflash?type=realtime&id=${feedId}`);
     if(!r.ok) return null;
     const bodyText=parseEnviroflashHtml(await r.text());
     const noAlert=/no Air Quality Advisory/i.test(bodyText);
@@ -1106,18 +1105,13 @@ async function loadHMSSmokeMap(){
   if(!smokeOn) return;
   try{
     const now=new Date();
-    const y=now.getFullYear();
-    const mo=String(now.getMonth()+1).padStart(2,'0');
-    const d=String(now.getDate()).padStart(2,'0');
-    const dateStr=`${y}${mo}${d}`;
-    const url=`https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/GeoJSON/${y}/${mo}/hms_smoke${dateStr}.json`;
-    const r=await fetch(url);
+    const dateStr=now.toISOString().slice(0,10).replace(/-/g,'');
+    const r=await fetch(`/api/hms-smoke?date=${dateStr}`);
     if(!r.ok){
       // Try yesterday if today not available yet
       const yest=new Date(now-86400000);
-      const y2=yest.getFullYear(),mo2=String(yest.getMonth()+1).padStart(2,'0'),d2=String(yest.getDate()).padStart(2,'0');
-      const url2=`https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/GeoJSON/${y2}/${mo2}/hms_smoke${y2}${mo2}${d2}.json`;
-      const r2=await fetch(url2);
+      const dateStr2=yest.toISOString().slice(0,10).replace(/-/g,'');
+      const r2=await fetch(`/api/hms-smoke?date=${dateStr2}`);
       if(!r2.ok) throw new Error('HMS unavailable');
       const d2data=await r2.json();
       renderSmokeGeoJSON(d2data, `${yest.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`);
@@ -1170,14 +1164,13 @@ async function loadHMSSmoke(){
   panel.innerHTML=`<div style="font-family:var(--mono);font-size:12px;color:var(--text3);">Loading NOAA HMS smoke data...</div>`;
   try{
     const now=new Date();
-    const y=now.getFullYear(),mo=String(now.getMonth()+1).padStart(2,'0'),d=String(now.getDate()).padStart(2,'0');
-    const url=`https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/GeoJSON/${y}/${mo}/hms_smoke${y}${mo}${d}.json`;
-    let r=await fetch(url);
+    const dateStr=now.toISOString().slice(0,10).replace(/-/g,'');
+    let r=await fetch(`/api/hms-smoke?date=${dateStr}`);
     let dateUsed='today';
     if(!r.ok){
       const yest=new Date(now-86400000);
-      const y2=yest.getFullYear(),mo2=String(yest.getMonth()+1).padStart(2,'0'),d2=String(yest.getDate()).padStart(2,'0');
-      r=await fetch(`https://satepsanone.nesdis.noaa.gov/pub/FIRE/web/HMS/Smoke_Polygons/GeoJSON/${y2}/${mo2}/hms_smoke${y2}${mo2}${d2}.json`);
+      const dateStr2=yest.toISOString().slice(0,10).replace(/-/g,'');
+      r=await fetch(`/api/hms-smoke?date=${dateStr2}`);
       dateUsed=yest.toLocaleDateString('en-US',{month:'short',day:'numeric'});
       if(!r.ok) throw new Error('unavailable');
     }
